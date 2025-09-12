@@ -1,10 +1,42 @@
 # Protobuf 语义化指纹库
 
-一个用于计算 Protobuf 文件语义化指纹并检查向后兼容性的 Rust 库。
+一个用于计算 Protobuf 文件语义化指纹并检查向后兼容性的 Rust 库和 CLI 工具。
 
 本库提供两大核心功能：
 1.  **精确语义指纹**: 一个 SHA-256 哈希值，它对 `.proto` 文件中的任何语义变更都敏感，但对注释、空格、字段顺序等非语义化的表面变更不敏感。
 2.  **兼容性检查器**: 一个高级 API，用于比较两个版本的 `.proto` 文件，并判断变更是都向后兼容。
+
+## CLI 使用
+
+安装 CLI 工具：
+
+```bash
+cargo install --path .
+```
+
+### 比较 Protobuf 文件
+
+比较两个 `.proto` 文件的兼容性：
+
+```bash
+proto-sign compare old.proto new.proto
+```
+
+命令根据兼容性返回不同结果：
+
+*   **Green**: 文件在语义上完全相同（退出码 0）
+*   **Yellow**: 新文件向后兼容旧文件（退出码 0）
+*   **Red**: 检测到破坏性变更（退出码 1）
+
+### 生成语义指纹
+
+为 `.proto` 文件生成语义指纹：
+
+```bash
+proto-sign fingerprint file.proto
+```
+
+这会输出一个代表文件语义内容的 SHA-256 哈希值。
 
 ## 高级 API: `Spec` 检查器
 

@@ -1,10 +1,42 @@
 # Protobuf Semantic Fingerprint
 
-A Rust library for calculating semantic fingerprints of Protobuf files and checking for backward compatibility.
+A Rust library and CLI tool for calculating semantic fingerprints of Protobuf files and checking for backward compatibility.
 
 This library provides two main pieces of functionality:
 1.  **Exact Semantic Fingerprint**: A SHA-256 hash that is sensitive to any semantic change in a `.proto` file but insensitive to cosmetic changes like comments, whitespace, or field ordering.
 2.  **Compatibility Checker**: A high-level API to compare two versions of a `.proto` file and determine if the change is backward-compatible.
+
+## CLI Usage
+
+Install the CLI tool:
+
+```bash
+cargo install --path .
+```
+
+### Compare Protobuf Files
+
+Compare two `.proto` files for compatibility:
+
+```bash
+proto-sign compare old.proto new.proto
+```
+
+The command returns different results based on compatibility:
+
+*   **Green**: Files are semantically identical (exit code 0)
+*   **Yellow**: New file is backward-compatible with old file (exit code 0)
+*   **Red**: Breaking change detected (exit code 1)
+
+### Generate Semantic Fingerprint
+
+Generate a semantic fingerprint for a `.proto` file:
+
+```bash
+proto-sign fingerprint file.proto
+```
+
+This outputs a SHA-256 hash that represents the semantic content of the file.
 
 ## High-Level API: The `Spec` Checker
 
