@@ -1,7 +1,9 @@
+pub mod compat;
 pub mod canonical;
 pub mod compatibility;
 pub mod normalize;
 pub mod spec;
+pub mod test_bulk_count;
 
 pub use spec::{Compatibility, Spec};
 

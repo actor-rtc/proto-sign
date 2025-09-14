@@ -1,106 +1,123 @@
-# Protobuf Semantic Fingerprint
+# Proto-Sign
 
-A Rust library and CLI tool for calculating semantic fingerprints of Protobuf files and checking for backward compatibility.
+A Rust tool for Protocol Buffers compatibility checking and semantic fingerprinting.
 
-This library provides two main pieces of functionality:
-1.  **Exact Semantic Fingerprint**: A SHA-256 hash that is sensitive to any semantic change in a `.proto` file but insensitive to cosmetic changes like comments, whitespace, or field ordering.
-2.  **Compatibility Checker**: A high-level API to compare two versions of a `.proto` file and determine if the change is backward-compatible.
+## Features
 
-## CLI Usage
+- **Breaking Change Detection**: Comprehensive rule-based checking for protobuf compatibility
+- **Semantic Fingerprinting**: Generate stable fingerprints that ignore formatting changes
+- **Buf Compatible**: Same rules and behavior as Buf's breaking change system
+- **Flexible Configuration**: YAML-based configuration with predefined templates
 
-Install the CLI tool:
+## Installation
 
 ```bash
+# Build from source
+git clone https://github.com/your-org/proto-sign.git
+cd proto-sign
 cargo install --path .
+
+# Extract test configurations (for development)
+bash ./compat-configs/extract_buf_configs.sh
 ```
 
-### Compare Protobuf Files
+## Usage
 
-Compare two `.proto` files for compatibility:
+### Breaking Change Detection
 
 ```bash
+# Basic breaking change check
+proto-sign breaking old.proto new.proto
+
+# JSON output
+proto-sign breaking old.proto new.proto --format json
+
+# Use specific rule categories
+proto-sign breaking old.proto new.proto --use-categories FILE,WIRE
+```
+
+### Quick Compatibility Check
+
+```bash
+# Three-level compatibility assessment (Green/Yellow/Red)
 proto-sign compare old.proto new.proto
 ```
 
-The command returns different results based on compatibility:
-
-*   **Green**: Files are semantically identical (exit code 0)
-*   **Yellow**: New file is backward-compatible with old file (exit code 0)
-*   **Red**: Breaking change detected (exit code 1)
-
-### Generate Semantic Fingerprint
-
-Generate a semantic fingerprint for a `.proto` file:
+### Semantic Fingerprinting
 
 ```bash
+# Generate semantic fingerprint
 proto-sign fingerprint file.proto
 ```
 
-This outputs a SHA-256 hash that represents the semantic content of the file.
+## Configuration
 
-## High-Level API: The `Spec` Checker
+Proto-Sign uses YAML configuration files. Copy a template to get started:
 
-For most use cases, the high-level `Spec` API is the recommended way to use this library. It provides a simple way to compare two `.proto` files and get a clear, three-level result.
+```bash
+# Choose a configuration template
+cp compat-configs/examples/strict-mode.yaml proto-sign.yaml
 
-### Usage
+# Use custom configuration
+proto-sign breaking old.proto new.proto --config proto-sign.yaml
+```
+
+### Configuration Templates
+
+- **`strict-mode.yaml`** - All rule categories (recommended for public APIs)
+- **`lenient-mode.yaml`** - Balanced mode for internal APIs  
+- **`wire-only.yaml`** - Binary compatibility only
+- **`specific-rules.yaml`** - Custom rule selection
+
+### Configuration Format
+
+```yaml
+version: v1
+breaking:
+  use_categories:
+    - FILE
+    - PACKAGE
+    - WIRE
+    - WIRE_JSON
+  except_rules:
+    - FIELD_SAME_JSON_NAME
+  ignore:
+    - "generated/**"
+  ignore_unstable_packages: true
+```
+
+## Rule Categories
+
+- **FILE** - File-level changes (deletions, package changes)
+- **PACKAGE** - Package-level changes (message/service deletions)
+- **WIRE** - Binary encoding compatibility
+- **WIRE_JSON** - JSON serialization compatibility
+
+## Library Usage
 
 ```rust
 use proto_sign::spec::{Spec, Compatibility};
 
-fn main() {
-    let old_proto = r#"
-        syntax = "proto3";
-        message Test {
-            string name = 1;
-        }
-    "#;
+let old_spec = Spec::try_from(old_proto_content)?;
+let new_spec = Spec::try_from(new_proto_content)?;
 
-    let new_proto_compatible = r#"
-        syntax = "proto3";
-        // Adding a new field is backward-compatible.
-        message Test {
-            string name = 1;
-            int32 id = 2;
-        }
-    "#;
+match old_spec.compare_with(&new_spec) {
+    Compatibility::Green => println!("No changes"),
+    Compatibility::Yellow => println!("Backward compatible"),
+    Compatibility::Red => println!("Breaking changes detected"),
+}
 
-    let new_proto_breaking = r#"
-        syntax = "proto3";
-        // Changing a field's type is a breaking change.
-        message Test {
-            int64 name = 1;
-        }
-    "#;
-
-    let spec_old = Spec::try_from(old_proto).unwrap();
-    let spec_compatible = Spec::try_from(new_proto_compatible).unwrap();
-    let spec_breaking = Spec::try_from(new_proto_breaking).unwrap();
-
-    // Comparing identical specs -> Green
-    assert_eq!(spec_old.compare_with(&spec_old), Compatibility::Green);
-
-    // Comparing with a backward-compatible change -> Yellow
-    assert_eq!(spec_old.compare_with(&spec_compatible), Compatibility::Yellow);
-
-    // Comparing with a breaking change -> Red
-    assert_eq!(spec_old.compare_with(&spec_breaking), Compatibility::Red);
+// Detailed analysis
+let result = old_spec.check_breaking_changes(&new_spec);
+for change in result.changes {
+    println!("{}: {}", change.rule_id, change.message);
 }
 ```
 
-### Compatibility Levels
+## License
 
-The `compare_with` method returns a `Compatibility` enum with three possible values:
+Apache License 2.0
 
-*   `Compatibility::Green`: The two `.proto` files are semantically identical. No functional change.
-*   `Compatibility::Yellow`: The new file is backward-compatible with the old file. This typically means new optional fields or messages were added.
-*   `Compatibility::Red`: The new file has a breaking change compared to the old one. This means a field or message was removed, or a field had its type or number changed.
+## Acknowledgments
 
-## Low-Level APIs
-
-For more advanced use cases, the underlying functions are also public:
-
-*   `proto_sign::generate_fingerprint(content: &str) -> Result<String>`: Calculates the exact semantic fingerprint.
-*   `proto_sign::compatibility::get_compatibility_model(content: &str) -> Result<CompatibilityModel>`: Parses the file into a model containing only compatibility-relevant information.
-*   `proto_sign::compatibility::is_compatible(old: &CompatibilityModel, new: &CompatibilityModel) -> bool`: Performs the detailed subset comparison to check for backward compatibility.
-
----
+Breaking change detection rules ported from [Buf](https://github.com/bufbuild/buf).

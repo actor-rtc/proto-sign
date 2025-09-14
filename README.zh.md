@@ -1,106 +1,129 @@
-# Protobuf 语义化指纹库
+# Proto-Sign
 
-一个用于计算 Protobuf 文件语义化指纹并检查向后兼容性的 Rust 库和 CLI 工具。
+Protocol Buffers 兼容性检查和语义指纹工具。
 
-本库提供两大核心功能：
-1.  **精确语义指纹**: 一个 SHA-256 哈希值，它对 `.proto` 文件中的任何语义变更都敏感，但对注释、空格、字段顺序等非语义化的表面变更不敏感。
-2.  **兼容性检查器**: 一个高级 API，用于比较两个版本的 `.proto` 文件，并判断变更是都向后兼容。
+## 功能特性
 
-## CLI 使用
+- **破坏性变更检测**: 全面的基于规则的 protobuf 兼容性检查
+- **语义指纹生成**: 生成稳定的指纹，忽略格式变更
+- **Buf 兼容**: 与 Buf 相同的规则和行为
+- **灵活配置**: 基于 YAML 的配置，提供预设模板
 
-安装 CLI 工具：
+## 安装
 
 ```bash
+# 从源码构建
+git clone https://github.com/your-org/proto-sign.git
+cd proto-sign
 cargo install --path .
+
+# 提取测试配置（开发时需要）
+bash ./compat-configs/extract_buf_configs.sh
 ```
 
-### 比较 Protobuf 文件
+## 使用方法
 
-比较两个 `.proto` 文件的兼容性：
+### 破坏性变更检测
 
 ```bash
+# 基本的破坏性变更检查
+proto-sign breaking old.proto new.proto
+
+# JSON 输出
+proto-sign breaking old.proto new.proto --format json
+
+# 使用特定规则分类
+proto-sign breaking old.proto new.proto --use-categories FILE,WIRE
+```
+
+### 快速兼容性检查
+
+```bash
+# 三级兼容性评估 (绿色/黄色/红色)
 proto-sign compare old.proto new.proto
 ```
 
-命令根据兼容性返回不同结果：
-
-*   **Green**: 文件在语义上完全相同（退出码 0）
-*   **Yellow**: 新文件向后兼容旧文件（退出码 0）
-*   **Red**: 检测到破坏性变更（退出码 1）
-
-### 生成语义指纹
-
-为 `.proto` 文件生成语义指纹：
+### 语义指纹生成
 
 ```bash
+# 生成语义指纹
 proto-sign fingerprint file.proto
 ```
 
-这会输出一个代表文件语义内容的 SHA-256 哈希值。
+## 配置
 
-## 高级 API: `Spec` 检查器
+Proto-Sign 使用 YAML 配置文件。复制模板开始使用：
 
-对于绝大多数使用场景，我们推荐使用高级的 `Spec` API。它提供了一个简洁的方式来比较两个 `.proto` 文件，并给出一个清晰的三色等级结果。
+```bash
+# 选择配置模板
+cp compat-configs/examples/strict-mode.yaml proto-sign.yaml
 
-### 使用方法
+# 使用自定义配置
+proto-sign breaking old.proto new.proto --config proto-sign.yaml
+```
+
+### 配置模板
+
+- **`strict-mode.yaml`** - 所有规则分类（推荐用于公共 API）
+- **`lenient-mode.yaml`** - 内部 API 的平衡模式
+- **`wire-only.yaml`** - 仅二进制兼容性
+- **`specific-rules.yaml`** - 自定义规则选择
+
+### 配置格式
+
+```yaml
+version: v1
+breaking:
+  use_categories:
+    - FILE
+    - PACKAGE
+    - WIRE
+    - WIRE_JSON
+  except_rules:
+    - FIELD_SAME_JSON_NAME
+  ignore:
+    - "generated/**"
+  ignore_unstable_packages: true
+```
+
+## 规则分类
+
+- **FILE** - 文件级变更（删除、包变更）
+- **PACKAGE** - 包级变更（消息/服务删除）
+- **WIRE** - 二进制编码兼容性
+- **WIRE_JSON** - JSON 序列化兼容性
+
+## 库使用
 
 ```rust
 use proto_sign::spec::{Spec, Compatibility};
 
-fn main() {
-    let old_proto = r#"
-        syntax = "proto3";
-        message Test {
-            string name = 1;
-        }
-    "#;
+let old_spec = Spec::try_from(old_proto_content)?;
+let new_spec = Spec::try_from(new_proto_content)?;
 
-    let new_proto_compatible = r#"
-        syntax = "proto3";
-        // 增加一个新字段是向后兼容的
-        message Test {
-            string name = 1;
-            int32 id = 2;
-        }
-    "#;
+match old_spec.compare_with(&new_spec) {
+    Compatibility::Green => println!("无变更"),
+    Compatibility::Yellow => println!("向后兼容"),
+    Compatibility::Red => println!("检测到破坏性变更"),
+}
 
-    let new_proto_breaking = r#"
-        syntax = "proto3";
-        // 修改字段类型是破坏性变更
-        message Test {
-            int64 name = 1;
-        }
-    "#;
-
-    let spec_old = Spec::try_from(old_proto).unwrap();
-    let spec_compatible = Spec::try_from(new_proto_compatible).unwrap();
-    let spec_breaking = Spec::try_from(new_proto_breaking).unwrap();
-
-    // 比较两个完全相同的规约 -> Green
-    assert_eq!(spec_old.compare_with(&spec_old), Compatibility::Green);
-
-    // 比较一个向后兼容的变更 -> Yellow
-    assert_eq!(spec_old.compare_with(&spec_compatible), Compatibility::Yellow);
-
-    // 比较一个破坏性变更 -> Red
-    assert_eq!(spec_old.compare_with(&spec_breaking), Compatibility::Red);
+// 详细分析
+let result = old_spec.check_breaking_changes(&new_spec);
+for change in result.changes {
+    println!("{}: {}", change.rule_id, change.message);
 }
 ```
 
-### 兼容性等级
+## 兼容性等级
 
-`compare_with` 方法返回一个 `Compatibility` 枚举，它有三个可能的值：
+- **绿色**: 文件在语义上完全相同
+- **黄色**: 新文件向后兼容旧文件
+- **红色**: 存在破坏性变更
 
-*   `Compatibility::Green`: 两个 `.proto` 文件在语义上完全相同。无功能性变更。
-*   `Compatibility::Yellow`: 新文件向后兼容旧文件。这通常意味着增加了新的可选字段或消息。
-*   `Compatibility::Red`: 新文件相比旧文件存在破坏性变更。这意味着有字段或消息被移除，或者某个字段的类型或编号被修改。
+## 许可证
 
-## 底层 API
+Apache License 2.0
 
-对于更高级的用例，底层的核心函数也是公开的：
+## 致谢
 
-*   `proto_sign::generate_fingerprint(content: &str) -> Result<String>`: 计算精确的语义指纹。
-*   `proto_sign::compatibility::get_compatibility_model(content: &str) -> Result<CompatibilityModel>`: 将文件解析为一个只包含兼容性相关信息的模型。
-*   `proto_sign::compatibility::is_compatible(old: &CompatibilityModel, new: &CompatibilityModel) -> bool`: 执行详细的子集比较以检查向后兼容性。
-
----
+破坏性变更检测规则移植自 [Buf](https://github.com/bufbuild/buf)。
