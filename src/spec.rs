@@ -17,6 +17,7 @@ pub enum Compatibility {
 }
 
 /// Represents a single Protobuf specification, holding its content and derived models for comparison.
+#[derive(Debug)]
 pub struct Spec<'a> {
     /// The original content of the .proto file.
     pub content: &'a str,
