@@ -1,5 +1,6 @@
 //! Core types for breaking change detection
 
+use crate::canonical::CanonicalFile;
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
 
@@ -91,3 +92,9 @@ impl RuleResult {
         }
     }
 }
+
+/// Type alias for breaking change rule functions to reduce type complexity
+pub type RuleFn = fn(&CanonicalFile, &CanonicalFile, &RuleContext) -> RuleResult;
+
+/// Type alias for rule registry entries
+pub type RuleEntry = (&'static str, RuleFn);

@@ -24,12 +24,12 @@ breaking:
 "#;
 
     let config = BreakingConfig::from_yaml_str(yaml_content).unwrap();
-    
+
     assert_eq!(config.use_categories, vec!["FILE", "PACKAGE"]);
     assert_eq!(config.except_rules, vec!["FIELD_SAME_DEFAULT"]);
     assert_eq!(config.ignore, vec!["generated/**", "test/fixtures/**"]);
     assert!(config.ignore_unstable_packages);
-    
+
     // Check rule-specific ignores
     assert_eq!(
         config.ignore_only.get("FIELD_NO_DELETE").unwrap(),
@@ -51,7 +51,7 @@ breaking:
 "#;
 
     let config = BreakingConfig::from_yaml_str(yaml_content).unwrap();
-    
+
     assert_eq!(config.use_categories, vec!["WIRE_JSON"]);
     assert!(config.except_rules.is_empty());
     assert!(config.ignore.is_empty());
@@ -65,7 +65,7 @@ version: v1
 "#;
 
     let config = BreakingConfig::from_yaml_str(yaml_content).unwrap();
-    
+
     // Should use default values
     assert_eq!(config.use_categories, vec!["FILE", "PACKAGE"]);
     assert!(config.except_rules.is_empty());
@@ -85,9 +85,9 @@ breaking:
 "#;
 
     let config = BreakingConfig::from_yaml_str(yaml_content).unwrap();
-    
+
     assert_eq!(
-        config.use_rules, 
+        config.use_rules,
         vec!["MESSAGE_NO_DELETE", "FIELD_NO_DELETE", "ENUM_NO_DELETE"]
     );
     assert!(config.use_categories.is_empty()); // Should override categories

@@ -1,6 +1,6 @@
 //! Provides the high-level Spec API for comparing Protobuf files.
 
-use crate::compat::{BreakingEngine, BreakingConfig, BreakingResult};
+use crate::compat::{BreakingConfig, BreakingEngine, BreakingResult};
 use crate::compatibility::{CompatibilityModel, get_compatibility_model};
 use crate::generate_fingerprint;
 use std::collections::BTreeMap;
@@ -54,16 +54,22 @@ impl<'a> Spec<'a> {
         match Self::try_from_file_internal(file_path, content) {
             Ok(spec) => Ok(spec),
             Err(e) => {
-                eprintln!("Warning: Proto parsing failed, using fallback for {}: {}", 
-                    file_path.display(), e);
+                eprintln!(
+                    "Warning: Proto parsing failed, using fallback for {}: {}",
+                    file_path.display(),
+                    e
+                );
                 // Fallback: create a minimal spec with basic parsing
                 Ok(Self::create_fallback_spec(content))
             }
         }
     }
-    
+
     /// Internal try_from_file implementation without fallback
-    fn try_from_file_internal(file_path: &std::path::Path, content: &'a str) -> anyhow::Result<Self> {
+    fn try_from_file_internal(
+        file_path: &std::path::Path,
+        content: &'a str,
+    ) -> anyhow::Result<Self> {
         let fingerprint = generate_fingerprint(content)?;
         let compatibility_model = get_compatibility_model(content)?;
         let canonical_file = parse_canonical_file_with_context(content, Some(file_path))?;
@@ -74,25 +80,26 @@ impl<'a> Spec<'a> {
             canonical_file,
         })
     }
-    
+
     /// Create a fallback spec when parsing fails
     fn create_fallback_spec(content: &'a str) -> Self {
         // Use simplified fingerprint (just length + first/last chars as a basic hash)
-        let fingerprint = format!("fallback_{}_{}_{}", 
+        let fingerprint = format!(
+            "fallback_{}_{}_{}",
             content.len(),
             content.chars().next().unwrap_or('_') as u32,
             content.chars().last().unwrap_or('_') as u32
         );
-        
+
         // Use a minimal compatibility model
         let compatibility_model = CompatibilityModel {
             messages: std::collections::BTreeSet::new(),
             services: std::collections::BTreeSet::new(),
         };
-        
+
         // Use the fallback canonical file parser
         let canonical_file = create_fallback_canonical_file(content);
-        
+
         Spec {
             content,
             fingerprint,
@@ -127,7 +134,11 @@ impl<'a> Spec<'a> {
     }
 
     /// Perform detailed breaking change analysis with custom configuration
-    pub fn check_breaking_changes_with_config(&self, new_spec: &Spec, config: &BreakingConfig) -> BreakingResult {
+    pub fn check_breaking_changes_with_config(
+        &self,
+        new_spec: &Spec,
+        config: &BreakingConfig,
+    ) -> BreakingResult {
         let engine = BreakingEngine::new();
         engine.check(&new_spec.canonical_file, &self.canonical_file, config)
     }
@@ -139,13 +150,16 @@ fn parse_canonical_file(proto_content: &str) -> anyhow::Result<crate::canonical:
 }
 
 /// Parse a proto file content with optional file path context for imports
-fn parse_canonical_file_with_context(proto_content: &str, file_path_context: Option<&std::path::Path>) -> anyhow::Result<crate::canonical::CanonicalFile> {
+fn parse_canonical_file_with_context(
+    proto_content: &str,
+    file_path_context: Option<&std::path::Path>,
+) -> anyhow::Result<crate::canonical::CanonicalFile> {
     use anyhow::Context;
-    
+
     let temp_dir = tempfile::tempdir().context("Failed to create temp directory")?;
     let file_name = "input.proto";
     let temp_path = temp_dir.path().join(file_name);
-    
+
     // Pre-process proto content to handle unsupported syntax
     let processed_content = preprocess_proto_content(proto_content);
     std::fs::write(&temp_path, &processed_content).context("Failed to write to temp file")?;
@@ -157,54 +171,54 @@ fn parse_canonical_file_with_context(proto_content: &str, file_path_context: Opt
                 .trim()
                 .trim_start_matches("import ")
                 .trim_start_matches("public ")
+                .trim_start_matches("weak ")
                 .trim_matches(|c| c == '"' || c == ';');
 
             if !path_str.starts_with("google/protobuf/") {
                 let import_path = temp_dir.path().join(path_str);
                 if let Some(parent) = import_path.parent() {
                     std::fs::create_dir_all(parent).context(format!(
-                        "Failed to create parent dirs for import: {}",
-                        path_str
+                        "Failed to create parent dirs for import: {path_str}"
                     ))?;
                 }
-                
+
                 // Try to find the actual import file
                 let mut found = false;
-                
+
                 // First, try relative to the file being parsed if we have context
                 if let Some(context_path) = file_path_context {
                     if let Some(parent_dir) = context_path.parent() {
                         let actual_import_path = parent_dir.join(path_str);
                         if actual_import_path.exists() {
                             let import_content = std::fs::read_to_string(&actual_import_path)
-                                .context(format!("Failed to read import file: {}", path_str))?;
+                                .context(format!("Failed to read import file: {path_str}"))?;
                             let processed_import = preprocess_proto_content(&import_content);
                             std::fs::write(&import_path, processed_import)
-                                .context(format!("Failed to copy import file: {}", path_str))?;
+                                .context(format!("Failed to copy import file: {path_str}"))?;
                             found = true;
                         }
                     }
                 }
-                
+
                 // If not found with context, try current working directory
                 if !found {
                     let current_dir = std::path::Path::new(".");
                     let actual_import_path = current_dir.join(path_str);
-                    
+
                     if actual_import_path.exists() {
                         let import_content = std::fs::read_to_string(&actual_import_path)
-                            .context(format!("Failed to read import file: {}", path_str))?;
+                            .context(format!("Failed to read import file: {path_str}"))?;
                         let processed_import = preprocess_proto_content(&import_content);
                         std::fs::write(&import_path, processed_import)
-                            .context(format!("Failed to copy import file: {}", path_str))?;
+                            .context(format!("Failed to copy import file: {path_str}"))?;
                         found = true;
                     }
                 }
-                
+
                 // Fallback: create a dummy proto3 file
                 if !found {
                     std::fs::write(&import_path, "syntax = \"proto3\";")
-                        .context(format!("Failed to create dummy import file: {}", path_str))?;
+                        .context(format!("Failed to create dummy import file: {path_str}"))?;
                 }
             }
         }
@@ -214,7 +228,7 @@ fn parse_canonical_file_with_context(proto_content: &str, file_path_context: Opt
     match try_parse_with_fallback(&temp_dir, &temp_path, file_name, &processed_content) {
         Ok(canonical_file) => Ok(canonical_file),
         Err(e) => {
-            eprintln!("Warning: Proto parsing failed, using fallback: {}", e);
+            eprintln!("Warning: Proto parsing failed, using fallback: {e}");
             Ok(create_fallback_canonical_file(&processed_content))
         }
     }
@@ -224,11 +238,11 @@ fn parse_canonical_file_with_context(proto_content: &str, file_path_context: Opt
 fn preprocess_proto_content(content: &str) -> String {
     let lines: Vec<String> = content.lines().map(|s| s.to_string()).collect();
     let mut processed_lines = Vec::new();
-    
+
     // Detect if this is an editions file and convert to proto3
     let mut is_editions = false;
     let mut has_syntax_declaration = false;
-    
+
     for line in &lines {
         let trimmed = line.trim();
         if trimmed.starts_with("edition =") {
@@ -240,21 +254,21 @@ fn preprocess_proto_content(content: &str) -> String {
             has_syntax_declaration = true;
         }
     }
-    
+
     // If no syntax declaration and not editions, default to proto2
     if !has_syntax_declaration && !is_editions {
         processed_lines.insert(0, "syntax = \"proto2\";".to_string());
         processed_lines.insert(1, "".to_string());
     }
-    
+
     for line in &lines {
         let trimmed = line.trim();
-        
+
         // Skip edition lines (already handled)
         if trimmed.starts_with("edition =") {
             continue;
         }
-        
+
         // Convert editions-specific features to proto3 equivalents
         if is_editions {
             let converted_line = convert_editions_features(line);
@@ -263,14 +277,14 @@ fn preprocess_proto_content(content: &str) -> String {
             processed_lines.push(line.clone());
         }
     }
-    
+
     processed_lines.join("\n")
 }
 
 /// Convert Protobuf Editions features to proto3 equivalent syntax
 fn convert_editions_features(line: &str) -> String {
     let mut result = line.to_string();
-    
+
     // Convert [features.field_presence = LEGACY_REQUIRED] to similar proto2/proto3 syntax
     if result.contains("[features.field_presence = LEGACY_REQUIRED]") {
         // Remove the feature annotation for now - this is a simplification
@@ -280,7 +294,7 @@ fn convert_editions_features(line: &str) -> String {
             result = result.trim_end().to_string();
         }
     }
-    
+
     // Convert other editions features as needed
     if result.contains("[features.") {
         // For now, remove unsupported features annotations
@@ -292,15 +306,20 @@ fn convert_editions_features(line: &str) -> String {
             }
         }
     }
-    
+
     result
 }
 
 /// Attempt to parse proto files with error recovery
-fn try_parse_with_fallback(temp_dir: &tempfile::TempDir, temp_path: &std::path::Path, file_name: &str, _processed_content: &str) -> anyhow::Result<crate::canonical::CanonicalFile> {
+fn try_parse_with_fallback(
+    temp_dir: &tempfile::TempDir,
+    temp_path: &std::path::Path,
+    file_name: &str,
+    _processed_content: &str,
+) -> anyhow::Result<crate::canonical::CanonicalFile> {
     use anyhow::Context;
     use protobuf_parse::Parser;
-    
+
     let parsed = Parser::new()
         .pure()
         .include(temp_dir.path())
@@ -322,9 +341,9 @@ fn try_parse_with_fallback(temp_dir: &tempfile::TempDir, temp_path: &std::path::
 fn create_fallback_canonical_file(content: &str) -> crate::canonical::CanonicalFile {
     use crate::canonical::*;
     use std::collections::BTreeSet;
-    
+
     let mut canonical_file = CanonicalFile::default();
-    
+
     // Extract syntax
     for line in content.lines() {
         let trimmed = line.trim();
@@ -340,21 +359,21 @@ fn create_fallback_canonical_file(content: &str) -> crate::canonical::CanonicalF
             break;
         }
     }
-    
+
     // If no syntax found, default to proto2 (protobuf default)
     if canonical_file.syntax.is_empty() {
         canonical_file.syntax = "proto2".to_string();
     }
-    
+
     // Extract package
     for line in content.lines() {
         let trimmed = line.trim();
         if trimmed.starts_with("package ") && trimmed.ends_with(';') {
-            canonical_file.package = Some(trimmed[8..trimmed.len()-1].trim().to_string());
+            canonical_file.package = Some(trimmed[8..trimmed.len() - 1].trim().to_string());
             break;
         }
     }
-    
+
     // Extract messages and enums (for basic breaking change detection)
     let mut messages = BTreeSet::new();
     let mut enums = BTreeSet::new();
@@ -364,10 +383,10 @@ fn create_fallback_canonical_file(content: &str) -> crate::canonical::CanonicalF
     let mut current_enum = String::new();
     let mut current_enum_options = BTreeMap::new();
     let mut brace_count = 0;
-    
+
     for line in content.lines() {
         let trimmed = line.trim();
-        
+
         // Handle message parsing
         if trimmed.starts_with("message ") && !in_enum {
             if let Some(name_part) = trimmed.strip_prefix("message ") {
@@ -382,7 +401,7 @@ fn create_fallback_canonical_file(content: &str) -> crate::canonical::CanonicalF
                 brace_count = trimmed.matches('{').count();
             }
         }
-        
+
         // Handle enum parsing
         if trimmed.starts_with("enum ") && !in_message {
             if let Some(name_part) = trimmed.strip_prefix("enum ") {
@@ -398,24 +417,22 @@ fn create_fallback_canonical_file(content: &str) -> crate::canonical::CanonicalF
                 brace_count = trimmed.matches('{').count();
             }
         }
-        
+
         // Extract enum options while in enum
-        if in_enum && trimmed.starts_with("option ") {
-            if trimmed.contains("features.json_format") {
-                // Extract json_format value
-                if let Some(equals_pos) = trimmed.find('=') {
-                    let value_part = &trimmed[equals_pos + 1..];
-                    let value = value_part.trim().trim_end_matches(';').trim();
-                    current_enum_options.insert("json_format".to_string(), value.to_string());
-                }
+        if in_enum && trimmed.starts_with("option ") && trimmed.contains("features.json_format") {
+            // Extract json_format value
+            if let Some(equals_pos) = trimmed.find('=') {
+                let value_part = &trimmed[equals_pos + 1..];
+                let value = value_part.trim().trim_end_matches(';').trim();
+                current_enum_options.insert("json_format".to_string(), value.to_string());
             }
         }
-        
+
         // Handle brace counting for both messages and enums
         if in_message || in_enum {
             brace_count += trimmed.matches('{').count();
             brace_count -= trimmed.matches('}').count();
-            
+
             if brace_count == 0 {
                 if in_message {
                     // Create a minimal message with extracted fields
@@ -453,24 +470,27 @@ fn create_fallback_canonical_file(content: &str) -> crate::canonical::CanonicalF
             }
         }
     }
-    
+
     canonical_file.messages = messages;
     canonical_file.enums = enums;
     canonical_file
 }
 
 /// Extract fields from a message using text parsing
-fn extract_fields_from_text(content: &str, message_name: &str) -> std::collections::BTreeSet<crate::canonical::CanonicalField> {
+fn extract_fields_from_text(
+    content: &str,
+    message_name: &str,
+) -> std::collections::BTreeSet<crate::canonical::CanonicalField> {
     use std::collections::BTreeSet;
-    
+
     let mut fields = BTreeSet::new();
     let mut in_message = false;
     let mut brace_count = 0;
     let mut found_message = false;
-    
+
     for line in content.lines() {
         let trimmed = line.trim();
-        
+
         // Find the specific message
         if trimmed.starts_with("message ") {
             if let Some(name_part) = trimmed.strip_prefix("message ") {
@@ -481,7 +501,7 @@ fn extract_fields_from_text(content: &str, message_name: &str) -> std::collectio
                 } else {
                     name_part.trim()
                 };
-                
+
                 if name == message_name {
                     found_message = true;
                     in_message = true;
@@ -489,80 +509,81 @@ fn extract_fields_from_text(content: &str, message_name: &str) -> std::collectio
                 }
             }
         }
-        
+
         if found_message && in_message {
             brace_count += trimmed.matches('{').count();
             brace_count -= trimmed.matches('}').count();
-            
+
             // Parse field lines
-            if brace_count > 0 && !trimmed.starts_with("message ") && !trimmed.starts_with("enum ") {
+            if brace_count > 0 && !trimmed.starts_with("message ") && !trimmed.starts_with("enum ")
+            {
                 if let Some(field) = parse_field_line(trimmed) {
                     fields.insert(field);
                 }
             }
-            
+
             if brace_count == 0 {
                 break; // Exit when message ends
             }
         }
     }
-    
+
     fields
 }
 
 /// Parse a single field line from proto text
 fn parse_field_line(line: &str) -> Option<crate::canonical::CanonicalField> {
     use crate::canonical::CanonicalField;
-    
+
     let trimmed = line.trim();
-    
+
     // Skip comments, empty lines, and nested definitions
     if trimmed.is_empty() || trimmed.starts_with("//") || trimmed.starts_with("oneof ") {
         return None;
     }
-    
+
     // Parse field format: [label] type name = number;
     // Examples:
     // int32 one = 1;
     // repeated int64 one = 1;
     // optional int32 one = 1;
     // map<int32, Two> six = 6;
-    
+
     let parts: Vec<&str> = trimmed.split_whitespace().collect();
     if parts.len() < 4 {
         return None;
     }
-    
+
     let mut idx = 0;
     let mut label = None;
-    
+
     // Check for label (optional, required, repeated)
     if parts[idx] == "optional" || parts[idx] == "required" || parts[idx] == "repeated" {
         label = Some(parts[idx].to_string());
         idx += 1;
     }
-    
+
     if idx + 2 >= parts.len() {
         return None;
     }
-    
+
     let type_name = parts[idx].to_string();
     let field_name = parts[idx + 1].to_string();
-    
+
     // Extract field number from "= number;"
     let equals_idx = idx + 2;
     if equals_idx >= parts.len() || parts[equals_idx] != "=" {
         return None;
     }
-    
+
     let number_str = if equals_idx + 1 < parts.len() {
         parts[equals_idx + 1].trim_end_matches(';')
     } else {
         return None;
     };
-    
+
     let number = number_str.parse::<i32>().ok()?;
-    
+
     Some(CanonicalField {
         name: field_name,
         number,

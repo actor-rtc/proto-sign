@@ -90,12 +90,11 @@ pub fn get_compatibility_model(proto_content: &str) -> anyhow::Result<Compatibil
                 let import_path = temp_dir.path().join(path_str);
                 if let Some(parent) = import_path.parent() {
                     std::fs::create_dir_all(parent).context(format!(
-                        "Failed to create parent dirs for import: {}",
-                        path_str
+                        "Failed to create parent dirs for import: {path_str}"
                     ))?;
                 }
                 std::fs::write(&import_path, "syntax = \"proto3\";")
-                    .context(format!("Failed to create dummy import file: {}", path_str))?;
+                    .context(format!("Failed to create dummy import file: {path_str}"))?;
             }
         }
     }

@@ -2,7 +2,7 @@ use serde::Serialize;
 
 // Note: Using BTreeSet for sorted, unique collections.
 // This requires `Ord` to be derived.
-use std::collections::{BTreeSet, BTreeMap};
+use std::collections::{BTreeMap, BTreeSet};
 
 //==============================================================================
 // Reserved Types for Breaking Change Detection
@@ -42,11 +42,11 @@ pub struct CanonicalFile {
     pub services: BTreeSet<CanonicalService>,
     #[serde(skip_serializing_if = "BTreeSet::is_empty")]
     pub extensions: BTreeSet<CanonicalExtension>, // Extension field definitions
-    
+
     // ========================================
     // File Options - Complete Set for All Rules
     // ========================================
-    
+
     // Language-specific package options
     #[serde(skip_serializing_if = "Option::is_none")]
     pub go_package: Option<String>,
@@ -56,7 +56,7 @@ pub struct CanonicalFile {
     pub csharp_namespace: Option<String>,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub ruby_package: Option<String>,
-    
+
     // Java-specific options
     #[serde(skip_serializing_if = "Option::is_none")]
     pub java_multiple_files: Option<bool>,
@@ -66,11 +66,11 @@ pub struct CanonicalFile {
     pub java_string_check_utf8: Option<bool>,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub java_generic_services: Option<bool>,
-    
+
     // Objective-C options
     #[serde(skip_serializing_if = "Option::is_none")]
     pub objc_class_prefix: Option<String>,
-    
+
     // PHP options
     #[serde(skip_serializing_if = "Option::is_none")]
     pub php_class_prefix: Option<String>,
@@ -80,21 +80,21 @@ pub struct CanonicalFile {
     pub php_metadata_namespace: Option<String>,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub php_generic_services: Option<bool>, // Deprecated
-    
+
     // Swift options
     #[serde(skip_serializing_if = "Option::is_none")]
     pub swift_prefix: Option<String>,
-    
+
     // C++ options
     #[serde(skip_serializing_if = "Option::is_none")]
     pub cc_generic_services: Option<bool>,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub cc_enable_arenas: Option<bool>,
-    
+
     // Python options
     #[serde(skip_serializing_if = "Option::is_none")]
     pub py_generic_services: Option<bool>,
-    
+
     // Optimization options
     #[serde(skip_serializing_if = "Option::is_none")]
     pub optimize_for: Option<String>, // "SPEED", "CODE_SIZE", "LITE_RUNTIME"
@@ -118,7 +118,7 @@ pub struct CanonicalMessage {
     pub reserved_names: BTreeSet<ReservedName>,
     #[serde(skip_serializing_if = "BTreeSet::is_empty")]
     pub extension_ranges: BTreeSet<ReservedRange>, // Extensions use same range format
-    
+
     // Message-level options for breaking change rules
     #[serde(skip_serializing_if = "Option::is_none")]
     pub message_set_wire_format: Option<bool>,
@@ -139,17 +139,17 @@ pub struct CanonicalField {
     pub type_name: String,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub oneof_index: Option<i32>,
-    
+
     // ========================================
     // Field Options - Complete Set for All Rules
     // ========================================
-    
+
     // Basic field attributes
     #[serde(skip_serializing_if = "Option::is_none")]
     pub default: Option<String>,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub json_name: Option<String>,
-    
+
     // Type-specific options
     #[serde(skip_serializing_if = "Option::is_none")]
     pub jstype: Option<String>, // "JS_NORMAL", "JS_STRING", "JS_NUMBER"
@@ -157,19 +157,19 @@ pub struct CanonicalField {
     pub ctype: Option<String>, // Deprecated
     #[serde(skip_serializing_if = "Option::is_none")]
     pub cpp_string_type: Option<String>, // Replacement for ctype
-    
+
     // Validation options
     #[serde(skip_serializing_if = "Option::is_none")]
     pub utf8_validation: Option<String>, // "VERIFY", "NONE"
     #[serde(skip_serializing_if = "Option::is_none")]
     pub java_utf8_validation: Option<bool>,
-    
+
     // Field state
     #[serde(skip_serializing_if = "Option::is_none")]
     pub deprecated: Option<bool>,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub weak: Option<bool>,
-    
+
     // Generic options map for any unrecognized options
     #[serde(skip_serializing_if = "BTreeMap::is_empty")]
     pub options: BTreeMap<String, String>,
@@ -200,7 +200,7 @@ pub struct CanonicalEnum {
     pub reserved_ranges: BTreeSet<ReservedRange>,
     #[serde(skip_serializing_if = "BTreeSet::is_empty")]
     pub reserved_names: BTreeSet<ReservedName>,
-    
+
     // Enum-level options for breaking change rules
     #[serde(skip_serializing_if = "Option::is_none")]
     pub allow_alias: Option<bool>,
@@ -208,7 +208,7 @@ pub struct CanonicalEnum {
     pub deprecated: Option<bool>,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub closed_enum: Option<bool>, // For editions/proto3 open vs closed
-    
+
     // Generic options map
     #[serde(skip_serializing_if = "BTreeMap::is_empty")]
     pub options: BTreeMap<String, String>,
@@ -232,7 +232,7 @@ pub struct CanonicalExtension {
     pub type_name: String,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub label: Option<String>, // "optional", "required", "repeated"
-    
+
     // Extension options (similar to field options)
     #[serde(skip_serializing_if = "Option::is_none")]
     pub default: Option<String>,
@@ -273,7 +273,7 @@ pub struct CanonicalMethod {
     pub client_streaming: bool,
     #[serde(default, skip_serializing_if = "std::ops::Not::not")]
     pub server_streaming: bool,
-    
+
     // Method options for breaking change rules
     #[serde(skip_serializing_if = "Option::is_none")]
     pub idempotency_level: Option<String>, // "NO_SIDE_EFFECTS", "IDEMPOTENT", "UNKNOWN"

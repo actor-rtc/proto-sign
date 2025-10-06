@@ -74,15 +74,21 @@ pub fn test_breaking_rule(
     test_name: &str,
     expected_annotations: Vec<ExpectedAnnotation>,
 ) -> anyhow::Result<()> {
-    let current_dir = format!("compat-configs/extracted/testdata/current/{}", test_name);
-    let previous_dir = format!("compat-configs/extracted/testdata/previous/{}", test_name);
+    let current_dir = format!("compat-configs/extracted/testdata/current/{test_name}");
+    let previous_dir = format!("compat-configs/extracted/testdata/previous/{test_name}");
 
     // Check if test directories exist
     if !Path::new(&current_dir).exists() {
-        return Err(anyhow::anyhow!("Current test directory not found: {}", current_dir));
+        return Err(anyhow::anyhow!(
+            "Current test directory not found: {}",
+            current_dir
+        ));
     }
     if !Path::new(&previous_dir).exists() {
-        return Err(anyhow::anyhow!("Previous test directory not found: {}", previous_dir));
+        return Err(anyhow::anyhow!(
+            "Previous test directory not found: {}",
+            previous_dir
+        ));
     }
 
     // Load all proto files from both directories
@@ -112,7 +118,10 @@ pub fn test_breaking_rule(
 
 /// Load all .proto files from a directory
 fn load_proto_files(dir_path: &str) -> anyhow::Result<Vec<(std::path::PathBuf, String)>> {
-    fn collect(dir: &std::path::Path, acc: &mut Vec<(std::path::PathBuf, String)>) -> anyhow::Result<()> {
+    fn collect(
+        dir: &std::path::Path,
+        acc: &mut Vec<(std::path::PathBuf, String)>,
+    ) -> anyhow::Result<()> {
         for entry in fs::read_dir(dir)? {
             let entry = entry?;
             let path = entry.path();
@@ -140,27 +149,31 @@ fn compare_results(
     expected_annotations: &[ExpectedAnnotation],
     test_name: &str,
 ) -> anyhow::Result<()> {
-    println!("=== Testing {} ===", test_name);
+    println!("=== Testing {test_name} ===");
     println!("Expected {} annotations", expected_annotations.len());
     println!("Found {} breaking changes", actual_changes.len());
 
     // Group actual changes by rule ID for easier comparison
-    let mut actual_by_rule: std::collections::HashMap<String, Vec<&proto_sign::compat::BreakingChange>> = 
-        std::collections::HashMap::new();
-    
+    let mut actual_by_rule: std::collections::HashMap<
+        String,
+        Vec<&proto_sign::compat::BreakingChange>,
+    > = std::collections::HashMap::new();
+
     for change in actual_changes {
-        actual_by_rule.entry(change.rule_id.clone())
-            .or_insert_with(Vec::new)
+        actual_by_rule
+            .entry(change.rule_id.clone())
+            .or_default()
             .push(change);
     }
 
     // Group expected annotations by rule ID
-    let mut expected_by_rule: std::collections::HashMap<String, Vec<&ExpectedAnnotation>> = 
+    let mut expected_by_rule: std::collections::HashMap<String, Vec<&ExpectedAnnotation>> =
         std::collections::HashMap::new();
-    
+
     for annotation in expected_annotations {
-        expected_by_rule.entry(annotation.rule_id.clone())
-            .or_insert_with(Vec::new)
+        expected_by_rule
+            .entry(annotation.rule_id.clone())
+            .or_default()
             .push(annotation);
     }
 
@@ -177,17 +190,23 @@ fn compare_results(
 
         if actual_count != expected_count {
             mismatches.push(format!(
-                "Rule {}: expected {} annotations, found {}",
-                rule_id, expected_count, actual_count
+                "Rule {rule_id}: expected {expected_count} annotations, found {actual_count}"
             ));
         }
 
         // Print details for debugging
         if actual_count > 0 {
-            println!("  {} ({}): {} changes", rule_id, 
-                if actual_count == expected_count { "✓" } else { "✗" }, 
-                actual_count);
-            
+            println!(
+                "  {} ({}): {} changes",
+                rule_id,
+                if actual_count == expected_count {
+                    "✓"
+                } else {
+                    "✗"
+                },
+                actual_count
+            );
+
             if let Some(changes) = actual_by_rule.get(&rule_id) {
                 for change in changes {
                     println!("    - {}", change.message);
@@ -199,15 +218,17 @@ fn compare_results(
     if !mismatches.is_empty() {
         println!("Mismatches found:");
         for mismatch in &mismatches {
-            println!("  {}", mismatch);
+            println!("  {mismatch}");
         }
-        
+
         // For now, we'll be lenient and just print warnings instead of failing
         // This allows us to see progress as we implement more rules
-        println!("Note: Test is currently in development mode - mismatches are warnings, not failures");
+        println!(
+            "Note: Test is currently in development mode - mismatches are warnings, not failures"
+        );
     }
 
-    println!("=== End {} ===\n", test_name);
+    println!("=== End {test_name} ===\n");
     Ok(())
 }
 
@@ -222,7 +243,8 @@ fn test_breaking_enum_no_delete() {
             ExpectedAnnotation::new("1.proto", 9, 1, 18, 2, "ENUM_NO_DELETE"),
             ExpectedAnnotation::new("1.proto", 10, 3, 14, 4, "ENUM_NO_DELETE"),
         ],
-    ).expect("Test should pass");
+    )
+    .expect("Test should pass");
 }
 
 #[test]
@@ -236,7 +258,8 @@ fn test_breaking_field_no_delete() {
             ExpectedAnnotation::new("1.proto", 22, 3, 25, 4, "FIELD_NO_DELETE"),
             ExpectedAnnotation::new("2.proto", 57, 1, 60, 2, "FIELD_NO_DELETE"),
         ],
-    ).expect("Test should pass");
+    )
+    .expect("Test should pass");
 }
 
 #[test]
@@ -248,7 +271,8 @@ fn test_breaking_message_no_delete() {
             ExpectedAnnotation::new("1.proto", 7, 1, 12, 2, "MESSAGE_NO_DELETE"),
             ExpectedAnnotation::new("1.proto", 8, 3, 10, 4, "MESSAGE_NO_DELETE"),
         ],
-    ).expect("Test should pass");
+    )
+    .expect("Test should pass");
 }
 
 #[test]
@@ -259,7 +283,8 @@ fn test_breaking_service_no_delete() {
             ExpectedAnnotation::no_location("1.proto", "SERVICE_NO_DELETE"),
             ExpectedAnnotation::no_location("1.proto", "SERVICE_NO_DELETE"),
         ],
-    ).expect("Test should pass");
+    )
+    .expect("Test should pass");
 }
 
 #[test]
@@ -273,7 +298,8 @@ fn test_breaking_enum_value_no_delete() {
             ExpectedAnnotation::new("1.proto", 40, 1, 42, 2, "ENUM_VALUE_NO_DELETE"),
             ExpectedAnnotation::new("2.proto", 48, 1, 52, 2, "ENUM_VALUE_NO_DELETE"),
         ],
-    ).expect("Test should pass");
+    )
+    .expect("Test should pass");
 }
 
 #[test]
@@ -288,7 +314,8 @@ fn test_breaking_field_same_type() {
             ExpectedAnnotation::new("1.proto", 13, 3, 13, 18, "FIELD_SAME_TYPE"),
             // ... more annotations would be added here
         ],
-    ).expect("Test should pass");
+    )
+    .expect("Test should pass");
 }
 
 #[test]
@@ -299,7 +326,8 @@ fn test_breaking_rpc_no_delete() {
             ExpectedAnnotation::new("1.proto", 7, 1, 10, 2, "RPC_NO_DELETE"),
             ExpectedAnnotation::new("2.proto", 31, 1, 34, 2, "RPC_NO_DELETE"),
         ],
-    ).expect("Test should pass");
+    )
+    .expect("Test should pass");
 }
 
 #[test]
@@ -314,7 +342,8 @@ fn test_breaking_field_same_name() {
             ExpectedAnnotation::new("2.proto", 48, 23, 48, 33, "FIELD_SAME_NAME"),
             // ... more annotations
         ],
-    ).expect("Test should pass");
+    )
+    .expect("Test should pass");
 }
 
 #[test]
@@ -325,5 +354,6 @@ fn test_breaking_file_same_package() {
             ExpectedAnnotation::new("a/a.proto", 3, 1, 3, 11, "FILE_SAME_PACKAGE"),
             ExpectedAnnotation::new("no_package.proto", 3, 1, 3, 11, "FILE_SAME_PACKAGE"),
         ],
-    ).expect("Test should pass");
+    )
+    .expect("Test should pass");
 }

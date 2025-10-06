@@ -1,5 +1,5 @@
-pub mod compat;
 pub mod canonical;
+pub mod compat;
 pub mod compatibility;
 pub mod normalize;
 pub mod spec;
@@ -51,12 +51,11 @@ pub fn generate_fingerprint(proto_content: &str) -> anyhow::Result<String> {
                 let import_path = temp_dir.path().join(path_str);
                 if let Some(parent) = import_path.parent() {
                     std::fs::create_dir_all(parent).context(format!(
-                        "Failed to create parent dirs for import: {}",
-                        path_str
+                        "Failed to create parent dirs for import: {path_str}"
                     ))?;
                 }
                 std::fs::write(&import_path, "syntax = \"proto3\";")
-                    .context(format!("Failed to create dummy import file: {}", path_str))?;
+                    .context(format!("Failed to create dummy import file: {path_str}"))?;
             }
         }
     }
@@ -90,5 +89,5 @@ pub fn generate_fingerprint(proto_content: &str) -> anyhow::Result<String> {
     let hash_result = hasher.finalize();
 
     // 5. Format as a hex string and return.
-    Ok(format!("{:x}", hash_result))
+    Ok(format!("{hash_result:x}"))
 }

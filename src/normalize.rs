@@ -2,8 +2,8 @@
 //! into a simplified, serializable `CanonicalFile` representation.
 
 use crate::canonical::{
-    CanonicalEnum, CanonicalEnumValue, CanonicalField, CanonicalFile, CanonicalMessage,
-    CanonicalMethod, CanonicalService, CanonicalExtension, ReservedRange, ReservedName,
+    CanonicalEnum, CanonicalEnumValue, CanonicalExtension, CanonicalField, CanonicalFile,
+    CanonicalMessage, CanonicalMethod, CanonicalService, ReservedName, ReservedRange,
 };
 use crate::compatibility::{
     CompatibilityField, CompatibilityMessage, CompatibilityMethod, CompatibilityModel,
@@ -15,14 +15,13 @@ use protobuf::descriptor::{
 };
 
 pub fn normalize_file(file: &FileDescriptorProto) -> CanonicalFile {
-    let mut canonical_file = CanonicalFile::default();
+    let mut canonical_file = CanonicalFile {
+        package: file.package.clone(),
+        ..Default::default()
+    };
 
-    canonical_file.package = file.package.clone();
-    
     // Extract syntax - defaults to "proto2" if not specified
-    canonical_file.syntax = file.syntax.as_ref()
-        .map(|s| s.clone())
-        .unwrap_or_else(|| "proto2".to_string());
+    canonical_file.syntax = file.syntax.clone().unwrap_or_else(|| "proto2".to_string());
 
     for import in file.dependency.iter() {
         canonical_file.imports.insert(import.clone());
@@ -60,7 +59,8 @@ pub fn normalize_file(file: &FileDescriptorProto) -> CanonicalFile {
             canonical_file.java_multiple_files = Some(file_options.java_multiple_files());
         }
         if file_options.has_java_outer_classname() {
-            canonical_file.java_outer_classname = Some(file_options.java_outer_classname().to_string());
+            canonical_file.java_outer_classname =
+                Some(file_options.java_outer_classname().to_string());
         }
         if file_options.has_java_string_check_utf8() {
             canonical_file.java_string_check_utf8 = Some(file_options.java_string_check_utf8());
@@ -75,7 +75,8 @@ pub fn normalize_file(file: &FileDescriptorProto) -> CanonicalFile {
             canonical_file.php_namespace = Some(file_options.php_namespace().to_string());
         }
         if file_options.has_php_metadata_namespace() {
-            canonical_file.php_metadata_namespace = Some(file_options.php_metadata_namespace().to_string());
+            canonical_file.php_metadata_namespace =
+                Some(file_options.php_metadata_namespace().to_string());
         }
         if file_options.has_ruby_package() {
             canonical_file.ruby_package = Some(file_options.ruby_package().to_string());
@@ -162,7 +163,8 @@ fn normalize_message(msg: &DescriptorProto) -> CanonicalMessage {
             canonical_msg.message_set_wire_format = Some(msg_options.message_set_wire_format());
         }
         if msg_options.has_no_standard_descriptor_accessor() {
-            canonical_msg.no_standard_descriptor_accessor = Some(msg_options.no_standard_descriptor_accessor());
+            canonical_msg.no_standard_descriptor_accessor =
+                Some(msg_options.no_standard_descriptor_accessor());
         }
         if msg_options.has_deprecated() {
             canonical_msg.deprecated = Some(msg_options.deprecated());
@@ -207,13 +209,13 @@ fn normalize_field(field: &FieldDescriptorProto) -> CanonicalField {
         if field_options.has_ctype() {
             let ctype_name = match field_options.ctype() {
                 protobuf::descriptor::field_options::CType::STRING => "STRING",
-                protobuf::descriptor::field_options::CType::CORD => "CORD", 
+                protobuf::descriptor::field_options::CType::CORD => "CORD",
                 protobuf::descriptor::field_options::CType::STRING_PIECE => "STRING_PIECE",
             };
             options.insert("ctype".to_string(), ctype_name.to_string());
             ctype = Some(ctype_name.to_string());
         }
-        
+
         // Extract jstype option
         if field_options.has_jstype() {
             let jstype_name = match field_options.jstype() {
@@ -224,39 +226,42 @@ fn normalize_field(field: &FieldDescriptorProto) -> CanonicalField {
             options.insert("jstype".to_string(), jstype_name.to_string());
             jstype = Some(jstype_name.to_string());
         }
-        
+
         // Extract packed option
         if field_options.has_packed() {
             options.insert("packed".to_string(), field_options.packed().to_string());
         }
-        
+
         // Extract deprecated option
         if field_options.has_deprecated() {
-            options.insert("deprecated".to_string(), field_options.deprecated().to_string());
+            options.insert(
+                "deprecated".to_string(),
+                field_options.deprecated().to_string(),
+            );
             deprecated = Some(field_options.deprecated());
         }
-        
+
         // Extract weak option
         if field_options.has_weak() {
             options.insert("weak".to_string(), field_options.weak().to_string());
             weak = Some(field_options.weak());
         }
-        
+
         // Extract UTF8 validation options (for string/bytes fields)
         // Note: This might be available through uninterpreted_option for editions/proto3
         // For java_string_check_utf8, check file-level option
-        
+
         // Note: default_value and json_name are on FieldDescriptorProto itself, not in options
         // We'll handle these at the field level instead
     }
-    
+
     // Extract field-level options from FieldDescriptorProto
     if field.has_default_value() {
         let v = field.default_value().to_string();
         options.insert("default".to_string(), v.clone());
         default = Some(v);
     }
-    
+
     if field.has_json_name() {
         let v = field.json_name().to_string();
         options.insert("json_name".to_string(), v.clone());
@@ -276,7 +281,7 @@ fn normalize_field(field: &FieldDescriptorProto) -> CanonicalField {
             Some(label.to_string())
         },
         type_name,
-        oneof_index: field.oneof_index.clone(),
+        oneof_index: field.oneof_index,
         // normalized fast-paths
         default,
         json_name: json_name_opt,
@@ -307,12 +312,18 @@ fn normalize_enum(en: &EnumDescriptorProto) -> CanonicalEnum {
     if let Some(enum_options) = en.options.as_ref() {
         // Extract standard enum options
         if enum_options.has_allow_alias() {
-            options.insert("allow_alias".to_string(), enum_options.allow_alias().to_string());
+            options.insert(
+                "allow_alias".to_string(),
+                enum_options.allow_alias().to_string(),
+            );
         }
         if enum_options.has_deprecated() {
-            options.insert("deprecated".to_string(), enum_options.deprecated().to_string());
+            options.insert(
+                "deprecated".to_string(),
+                enum_options.deprecated().to_string(),
+            );
         }
-        
+
         // Extract custom options from uninterpreted_option
         for uninterpreted in &enum_options.uninterpreted_option {
             if let Some(name_part) = uninterpreted.name.first() {
@@ -329,7 +340,9 @@ fn normalize_enum(en: &EnumDescriptorProto) -> CanonicalEnum {
                             if let Ok(string_val) = String::from_utf8(string_value.clone()) {
                                 options.insert(name.to_string(), string_val);
                             }
-                        } else if let Some(identifier_value) = uninterpreted.identifier_value.as_ref() {
+                        } else if let Some(identifier_value) =
+                            uninterpreted.identifier_value.as_ref()
+                        {
                             options.insert(name.to_string(), identifier_value.clone());
                         }
                     }
@@ -410,7 +423,7 @@ fn normalize_method(method: &MethodDescriptorProto) -> CanonicalMethod {
 fn normalize_extension(ext: &FieldDescriptorProto) -> CanonicalExtension {
     let label = match ext.label() {
         field_descriptor_proto::Label::LABEL_OPTIONAL => "optional",
-        field_descriptor_proto::Label::LABEL_REQUIRED => "required", 
+        field_descriptor_proto::Label::LABEL_REQUIRED => "required",
         field_descriptor_proto::Label::LABEL_REPEATED => "repeated",
     };
 
@@ -433,7 +446,7 @@ fn normalize_extension(ext: &FieldDescriptorProto) -> CanonicalExtension {
             deprecated = Some(ext_options.deprecated());
         }
     }
-    
+
     // Extract default value if present
     if ext.has_default_value() {
         default = Some(ext.default_value().to_string());
@@ -444,7 +457,11 @@ fn normalize_extension(ext: &FieldDescriptorProto) -> CanonicalExtension {
         number: ext.number(),
         extendee: ext.extendee().to_string(), // The message being extended
         type_name,
-        label: if label == "optional" { None } else { Some(label.to_string()) },
+        label: if label == "optional" {
+            None
+        } else {
+            Some(label.to_string())
+        },
         default,
         deprecated,
     }

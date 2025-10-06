@@ -1,10 +1,10 @@
 //! Integration test using real Buf test cases
-//! 
+//!
 //! This test verifies that our implementation produces the same results as Buf
 //! by using the extracted test cases from the Buf project.
 
-use proto_sign::spec::Spec;
 use proto_sign::compat::BreakingConfig;
+use proto_sign::spec::Spec;
 
 /// Test enum value deletion detection using Buf compatible rule
 #[test]
@@ -35,31 +35,47 @@ enum Status {
 
     let previous_spec = Spec::try_from(previous_proto).expect("Failed to parse previous proto");
     let current_spec = Spec::try_from(current_proto).expect("Failed to parse current proto");
-    
+
     let config = BreakingConfig {
         use_rules: vec!["ENUM_VALUE_NO_DELETE".to_string()],
         ..Default::default()
     };
-    
+
     let result = previous_spec.check_breaking_changes_with_config(&current_spec, &config);
-    
+
     // Should detect deleted enum value
-    assert!(result.has_breaking_changes, "Should detect breaking changes");
-    assert_eq!(result.changes.len(), 1, "Should detect exactly one enum value deletion");
-    
+    assert!(
+        result.has_breaking_changes,
+        "Should detect breaking changes"
+    );
+    assert_eq!(
+        result.changes.len(),
+        1,
+        "Should detect exactly one enum value deletion"
+    );
+
     println!("Detected breaking changes:");
     for change in &result.changes {
-        println!("  - {}: {} (location: {})", change.rule_id, change.message, change.location.element_name);
+        println!(
+            "  - {}: {} (location: {})",
+            change.rule_id, change.message, change.location.element_name
+        );
     }
-    
+
     let change = &result.changes[0];
     assert_eq!(change.rule_id, "ENUM_VALUE_NO_DELETE");
-    assert!(change.message.contains("INACTIVE"), "Should mention deleted 'INACTIVE' enum value");
-    assert!(change.message.contains("2"), "Should mention enum value number 2");
+    assert!(
+        change.message.contains("INACTIVE"),
+        "Should mention deleted 'INACTIVE' enum value"
+    );
+    assert!(
+        change.message.contains("2"),
+        "Should mention enum value number 2"
+    );
 }
 
 /// Test field deletion detection
-#[test] 
+#[test]
 fn test_field_no_delete_basic() {
     let previous_proto = r#"
 syntax = "proto3";
@@ -82,22 +98,35 @@ message Test {
 
     let previous_spec = Spec::try_from(previous_proto).expect("Failed to parse previous proto");
     let current_spec = Spec::try_from(current_proto).expect("Failed to parse current proto");
-    
+
     let config = BreakingConfig {
         use_rules: vec!["FIELD_NO_DELETE".to_string()],
         ..Default::default()
     };
-    
+
     let result = previous_spec.check_breaking_changes_with_config(&current_spec, &config);
-    
-    assert!(result.has_breaking_changes, "Should detect breaking changes");
-    assert_eq!(result.changes.len(), 1, "Should detect exactly one field deletion");
-    
+
+    assert!(
+        result.has_breaking_changes,
+        "Should detect breaking changes"
+    );
+    assert_eq!(
+        result.changes.len(),
+        1,
+        "Should detect exactly one field deletion"
+    );
+
     let change = &result.changes[0];
     assert_eq!(change.rule_id, "FIELD_NO_DELETE");
-    assert!(change.message.contains("id"), "Should mention deleted 'id' field");
-    assert!(change.message.contains("2"), "Should mention field number 2");
-    
+    assert!(
+        change.message.contains("id"),
+        "Should mention deleted 'id' field"
+    );
+    assert!(
+        change.message.contains("2"),
+        "Should mention field number 2"
+    );
+
     println!("Detected change: {}", change.message);
 }
 
@@ -126,21 +155,31 @@ message User {
 
     let previous_spec = Spec::try_from(previous_proto).expect("Failed to parse previous proto");
     let current_spec = Spec::try_from(current_proto).expect("Failed to parse current proto");
-    
+
     let config = BreakingConfig {
         use_rules: vec!["MESSAGE_NO_DELETE".to_string()],
         ..Default::default()
     };
-    
+
     let result = previous_spec.check_breaking_changes_with_config(&current_spec, &config);
-    
-    assert!(result.has_breaking_changes, "Should detect breaking changes");
-    assert_eq!(result.changes.len(), 1, "Should detect exactly one message deletion");
-    
+
+    assert!(
+        result.has_breaking_changes,
+        "Should detect breaking changes"
+    );
+    assert_eq!(
+        result.changes.len(),
+        1,
+        "Should detect exactly one message deletion"
+    );
+
     let change = &result.changes[0];
     assert_eq!(change.rule_id, "MESSAGE_NO_DELETE");
-    assert!(change.message.contains("Account"), "Should mention deleted 'Account' message");
-    
+    assert!(
+        change.message.contains("Account"),
+        "Should mention deleted 'Account' message"
+    );
+
     println!("Detected change: {}", change.message);
 }
 
@@ -167,23 +206,33 @@ message Test {
 
     let previous_spec = Spec::try_from(previous_proto).expect("Failed to parse previous proto");
     let current_spec = Spec::try_from(current_proto).expect("Failed to parse current proto");
-    
+
     let config = BreakingConfig {
         use_rules: vec!["FIELD_SAME_TYPE".to_string()],
         ..Default::default()
     };
-    
+
     let result = previous_spec.check_breaking_changes_with_config(&current_spec, &config);
-    
-    assert!(result.has_breaking_changes, "Should detect breaking changes");
-    assert_eq!(result.changes.len(), 1, "Should detect exactly one type change");
-    
+
+    assert!(
+        result.has_breaking_changes,
+        "Should detect breaking changes"
+    );
+    assert_eq!(
+        result.changes.len(),
+        1,
+        "Should detect exactly one type change"
+    );
+
     let change = &result.changes[0];
     assert_eq!(change.rule_id, "FIELD_SAME_TYPE");
-    assert!(change.message.contains("count"), "Should mention 'count' field");
+    assert!(
+        change.message.contains("count"),
+        "Should mention 'count' field"
+    );
     assert!(change.message.contains("int32"), "Should mention old type");
     assert!(change.message.contains("int64"), "Should mention new type");
-    
+
     println!("Detected change: {}", change.message);
 }
 
@@ -218,21 +267,31 @@ service UserService {
 
     let previous_spec = Spec::try_from(previous_proto).expect("Failed to parse previous proto");
     let current_spec = Spec::try_from(current_proto).expect("Failed to parse current proto");
-    
+
     let config = BreakingConfig {
         use_rules: vec!["SERVICE_NO_DELETE".to_string()],
         ..Default::default()
     };
-    
+
     let result = previous_spec.check_breaking_changes_with_config(&current_spec, &config);
-    
-    assert!(result.has_breaking_changes, "Should detect breaking changes");
-    assert_eq!(result.changes.len(), 1, "Should detect exactly one service deletion");
-    
+
+    assert!(
+        result.has_breaking_changes,
+        "Should detect breaking changes"
+    );
+    assert_eq!(
+        result.changes.len(),
+        1,
+        "Should detect exactly one service deletion"
+    );
+
     let change = &result.changes[0];
     assert_eq!(change.rule_id, "SERVICE_NO_DELETE");
-    assert!(change.message.contains("AccountService"), "Should mention deleted 'AccountService'");
-    
+    assert!(
+        change.message.contains("AccountService"),
+        "Should mention deleted 'AccountService'"
+    );
+
     println!("Detected change: {}", change.message);
 }
 
@@ -264,21 +323,31 @@ service UserService {
 
     let previous_spec = Spec::try_from(previous_proto).expect("Failed to parse previous proto");
     let current_spec = Spec::try_from(current_proto).expect("Failed to parse current proto");
-    
+
     let config = BreakingConfig {
         use_rules: vec!["RPC_NO_DELETE".to_string()],
         ..Default::default()
     };
-    
+
     let result = previous_spec.check_breaking_changes_with_config(&current_spec, &config);
-    
-    assert!(result.has_breaking_changes, "Should detect breaking changes");
-    assert_eq!(result.changes.len(), 1, "Should detect exactly one RPC deletion");
-    
+
+    assert!(
+        result.has_breaking_changes,
+        "Should detect breaking changes"
+    );
+    assert_eq!(
+        result.changes.len(),
+        1,
+        "Should detect exactly one RPC deletion"
+    );
+
     let change = &result.changes[0];
     assert_eq!(change.rule_id, "RPC_NO_DELETE");
-    assert!(change.message.contains("DeleteUser"), "Should mention deleted 'DeleteUser' RPC");
-    
+    assert!(
+        change.message.contains("DeleteUser"),
+        "Should mention deleted 'DeleteUser' RPC"
+    );
+
     println!("Detected change: {}", change.message);
 }
 
@@ -315,28 +384,42 @@ message User {
 
     let previous_spec = Spec::try_from(previous_proto).expect("Failed to parse previous proto");
     let current_spec = Spec::try_from(current_proto).expect("Failed to parse current proto");
-    
+
     let config = BreakingConfig {
         use_categories: vec!["FILE".to_string()],
         ..Default::default()
     };
-    
+
     let result = previous_spec.check_breaking_changes_with_config(&current_spec, &config);
-    
-    assert!(result.has_breaking_changes, "Should detect breaking changes");
-    assert!(result.changes.len() >= 3, "Should detect multiple breaking changes: {:#?}", result.changes);
-    
-    let rule_ids: std::collections::HashSet<&str> = result.changes
-        .iter()
-        .map(|c| c.rule_id.as_str())
-        .collect();
-    
-    // Should detect field deletion, field type change, and service deletion  
+
+    assert!(
+        result.has_breaking_changes,
+        "Should detect breaking changes"
+    );
+    assert!(
+        result.changes.len() >= 3,
+        "Should detect multiple breaking changes: {:#?}",
+        result.changes
+    );
+
+    let rule_ids: std::collections::HashSet<&str> =
+        result.changes.iter().map(|c| c.rule_id.as_str()).collect();
+
+    // Should detect field deletion, field type change, and service deletion
     // Note: No ENUM_NO_DELETE rule in Buf (only PACKAGE_ENUM_NO_DELETE and ENUM_VALUE_NO_DELETE)
-    assert!(rule_ids.contains("FIELD_NO_DELETE"), "Should detect field deletion");
-    assert!(rule_ids.contains("FIELD_SAME_TYPE"), "Should detect field type change"); 
-    assert!(rule_ids.contains("SERVICE_NO_DELETE"), "Should detect service deletion");
-    
+    assert!(
+        rule_ids.contains("FIELD_NO_DELETE"),
+        "Should detect field deletion"
+    );
+    assert!(
+        rule_ids.contains("FIELD_SAME_TYPE"),
+        "Should detect field type change"
+    );
+    assert!(
+        rule_ids.contains("SERVICE_NO_DELETE"),
+        "Should detect service deletion"
+    );
+
     println!("Detected {} breaking changes:", result.changes.len());
     for change in &result.changes {
         println!("  - {}: {}", change.rule_id, change.message);
@@ -366,13 +449,19 @@ service UserService {
 "#;
 
     let spec = Spec::try_from(proto).expect("Failed to parse proto");
-    
+
     let config = BreakingConfig::default();
     let result = spec.check_breaking_changes_with_config(&spec, &config);
-    
-    assert!(!result.has_breaking_changes, "Should not detect breaking changes for identical files");
+
+    assert!(
+        !result.has_breaking_changes,
+        "Should not detect breaking changes for identical files"
+    );
     assert_eq!(result.changes.len(), 0, "Should have no changes");
-    
+
     println!("Rules executed: {:?}", result.executed_rules);
-    assert!(!result.executed_rules.is_empty(), "Should have executed some rules");
+    assert!(
+        !result.executed_rules.is_empty(),
+        "Should have executed some rules"
+    );
 }

@@ -1,9 +1,9 @@
 //! Comprehensive test suite using ALL extracted Buf test cases
-//! 
+//!
 //! This dynamically generates tests for every Buf test case we extracted
 
-use proto_sign::spec::Spec;
 use proto_sign::compat::{BreakingConfig, BreakingResult};
+use proto_sign::spec::Spec;
 use std::fs;
 use std::path::Path;
 
@@ -17,7 +17,7 @@ fn test_all_buf_extracted_cases() -> Result<(), Box<dyn std::error::Error>> {
 
     let current_dir = testdata_dir.join("current");
     let previous_dir = testdata_dir.join("previous");
-    
+
     if !current_dir.exists() || !previous_dir.exists() {
         panic!("Current or previous test directories not found");
     }
@@ -43,48 +43,51 @@ fn test_all_buf_extracted_cases() -> Result<(), Box<dyn std::error::Error>> {
             }
         })
         .collect();
-    
+
     println!("Found {} Buf test cases to validate", test_dirs.len());
 
     for test_case in &test_dirs {
         total_tests += 1;
-        
-        println!("\n🔍 Testing case: {}", test_case);
-        
+
+        println!("\n🔍 Testing case: {test_case}");
+
         match run_single_buf_test_case(test_case) {
             Ok(result) => {
                 passed_tests += 1;
-                println!("  ✅ PASSED: {}", result);
+                println!("  ✅ PASSED: {result}");
             }
             Err(e) => {
-                println!("  ❌ FAILED: {}", e);
+                println!("  ❌ FAILED: {e}");
                 failed_tests.push((test_case.clone(), e.to_string()));
             }
         }
     }
 
     println!("\n📊 **COMPREHENSIVE TEST RESULTS:**");
-    println!("  Total test cases: {}", total_tests);
-    println!("  Passed: {}", passed_tests);
+    println!("  Total test cases: {total_tests}");
+    println!("  Passed: {passed_tests}");
     println!("  Failed: {}", failed_tests.len());
-    println!("  Success rate: {:.1}%", (passed_tests as f64 / total_tests as f64) * 100.0);
+    println!(
+        "  Success rate: {:.1}%",
+        (passed_tests as f64 / total_tests as f64) * 100.0
+    );
 
     if !failed_tests.is_empty() {
         println!("\n❌ **FAILED TEST CASES:**");
         for (test_name, error) in &failed_tests {
-            println!("  - {}: {}", test_name, error);
+            println!("  - {test_name}: {error}");
         }
     }
 
     // For now, let's be lenient and just report the results
     // In a perfect world, we'd assert that all tests pass, but given the complexity
     // of Buf's test cases and our implementation, some may require additional work
-    
+
     // Require at least 70% success rate
     let success_rate = (passed_tests as f64 / total_tests as f64) * 100.0;
-    assert!(success_rate >= 50.0, 
-        "Success rate too low: {:.1}%. Need at least 50% to pass comprehensive test", 
-        success_rate
+    assert!(
+        success_rate >= 50.0,
+        "Success rate too low: {success_rate:.1}%. Need at least 50% to pass comprehensive test"
     );
 
     println!("\n🎉 **Comprehensive test validation completed!**");
@@ -122,7 +125,7 @@ fn run_single_buf_test_case(test_case: &str) -> anyhow::Result<String> {
                             "ENUM_NO_DELETE".to_string(),
                             "ENUM_VALUE_NO_DELETE".to_string(),
                             "SERVICE_NO_DELETE".to_string(),
-                            "RPC_NO_DELETE".to_string()
+                            "RPC_NO_DELETE".to_string(),
                         ],
                         ..Default::default()
                     }
@@ -146,7 +149,7 @@ fn run_single_buf_test_case(test_case: &str) -> anyhow::Result<String> {
                     "ENUM_VALUE_SAME_NAME".to_string(),
                     "SERVICE_NO_DELETE".to_string(),
                     "RPC_NO_DELETE".to_string(),
-                    "FILE_SAME_PACKAGE".to_string()
+                    "FILE_SAME_PACKAGE".to_string(),
                 ],
                 ..Default::default()
             }
@@ -158,7 +161,9 @@ fn run_single_buf_test_case(test_case: &str) -> anyhow::Result<String> {
     let previous_protos = find_proto_files(&previous_dir)?;
 
     if current_protos.is_empty() || previous_protos.is_empty() {
-        return Err(anyhow::anyhow!("No proto files found in current or previous directory"));
+        return Err(anyhow::anyhow!(
+            "No proto files found in current or previous directory"
+        ));
     }
 
     // Test all proto file pairs to find breaking changes
@@ -172,7 +177,7 @@ fn run_single_buf_test_case(test_case: &str) -> anyhow::Result<String> {
 
     // Ensure we have the same number of files in both directories
     let min_files = std::cmp::min(current_protos.len(), previous_protos.len());
-    
+
     for i in 0..min_files {
         let current_proto = &current_protos[i];
         let previous_proto = &previous_protos[i];
@@ -191,17 +196,21 @@ fn run_single_buf_test_case(test_case: &str) -> anyhow::Result<String> {
 
         // Run breaking change detection for this file pair
         let file_result = previous_spec.check_breaking_changes_with_config(&current_spec, &config);
-        
+
         // Accumulate results
         if file_result.has_breaking_changes {
             combined_result.has_breaking_changes = true;
             combined_result.changes.extend(file_result.changes);
         }
-        
+
         // Merge metadata
-        combined_result.executed_rules.extend(file_result.executed_rules);
-        combined_result.failed_rules.extend(file_result.failed_rules);
-        
+        combined_result
+            .executed_rules
+            .extend(file_result.executed_rules);
+        combined_result
+            .failed_rules
+            .extend(file_result.failed_rules);
+
         for (category, count) in file_result.summary {
             *combined_result.summary.entry(category).or_insert(0) += count;
         }
@@ -214,37 +223,46 @@ fn run_single_buf_test_case(test_case: &str) -> anyhow::Result<String> {
     let actually_breaking = result.has_breaking_changes;
 
     if expected_breaking && actually_breaking {
-        Ok(format!("Correctly detected breaking changes ({} changes)", result.changes.len()))
+        Ok(format!(
+            "Correctly detected breaking changes ({} changes)",
+            result.changes.len()
+        ))
     } else if !expected_breaking && !actually_breaking {
         Ok("Correctly found no breaking changes".to_string())
     } else if expected_breaking && !actually_breaking {
         Err(anyhow::anyhow!("Expected breaking changes but found none"))
     } else {
         // !expected_breaking && actually_breaking
-        Ok(format!("Unexpectedly found breaking changes ({} changes) - may be correct depending on test setup", result.changes.len()))
+        Ok(format!(
+            "Unexpectedly found breaking changes ({} changes) - may be correct depending on test setup",
+            result.changes.len()
+        ))
     }
 }
 
 /// Find all .proto files in a directory recursively
 fn find_proto_files(dir: &Path) -> anyhow::Result<Vec<std::path::PathBuf>> {
     let mut proto_files = Vec::new();
-    
+
     if !dir.exists() {
         return Ok(proto_files);
     }
 
     find_proto_files_recursive(dir, &mut proto_files)?;
-    
+
     proto_files.sort();
     Ok(proto_files)
 }
 
 /// Recursively find proto files in directory and subdirectories
-fn find_proto_files_recursive(dir: &Path, proto_files: &mut Vec<std::path::PathBuf>) -> anyhow::Result<()> {
+fn find_proto_files_recursive(
+    dir: &Path,
+    proto_files: &mut Vec<std::path::PathBuf>,
+) -> anyhow::Result<()> {
     for entry in fs::read_dir(dir)? {
         let entry = entry?;
         let path = entry.path();
-        
+
         if path.is_file() && path.extension().and_then(|s| s.to_str()) == Some("proto") {
             proto_files.push(path);
         } else if path.is_dir() {
@@ -252,7 +270,7 @@ fn find_proto_files_recursive(dir: &Path, proto_files: &mut Vec<std::path::PathB
             find_proto_files_recursive(&path, proto_files)?;
         }
     }
-    
+
     Ok(())
 }
 
@@ -260,8 +278,8 @@ fn find_proto_files_recursive(dir: &Path, proto_files: &mut Vec<std::path::PathB
 fn should_detect_breaking_changes(test_case: &str) -> bool {
     // Most test cases starting with "breaking_" are testing that breaking changes ARE detected
     // Some exceptions might exist for negative test cases
-    test_case.starts_with("breaking_") && 
-    !test_case.contains("_no_") && 
-    !test_case.contains("ignores") &&
-    !test_case.contains("_false")
+    test_case.starts_with("breaking_")
+        && !test_case.contains("_no_")
+        && !test_case.contains("ignores")
+        && !test_case.contains("_false")
 }

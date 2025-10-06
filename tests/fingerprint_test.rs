@@ -3,7 +3,7 @@ use proto_sign::generate_fingerprint;
 use std::fs;
 
 fn read_proto(file_name: &str) -> String {
-    fs::read_to_string(format!("tests/data/{}", file_name)).expect("Could not read test proto file")
+    fs::read_to_string(format!("tests/data/{file_name}")).expect("Could not read test proto file")
 }
 
 #[test]

@@ -56,7 +56,11 @@ fn main() -> Result<()> {
     let args = Args::parse();
 
     match args.command {
-        Commands::Compare { old_file, new_file, detailed } => {
+        Commands::Compare {
+            old_file,
+            new_file,
+            detailed,
+        } => {
             let old_content = fs::read_to_string(&old_file).map_err(|e| {
                 anyhow::anyhow!("Failed to read old file '{}': {}", old_file.display(), e)
             })?;
@@ -74,8 +78,11 @@ fn main() -> Result<()> {
                     println!("Green: Files are semantically identical");
                     if detailed {
                         let breaking_result = old_spec.check_breaking_changes(&new_spec);
-                        println!("Detailed analysis: {} rules executed, {} breaking changes found", 
-                                breaking_result.executed_rules.len(), breaking_result.changes.len());
+                        println!(
+                            "Detailed analysis: {} rules executed, {} breaking changes found",
+                            breaking_result.executed_rules.len(),
+                            breaking_result.changes.len()
+                        );
                     }
                     std::process::exit(0);
                 }
@@ -83,10 +90,15 @@ fn main() -> Result<()> {
                     println!("Yellow: New file is backward-compatible with old file");
                     if detailed {
                         let breaking_result = old_spec.check_breaking_changes(&new_spec);
-                        println!("Detailed analysis: {} rules executed, {} breaking changes found", 
-                                breaking_result.executed_rules.len(), breaking_result.changes.len());
+                        println!(
+                            "Detailed analysis: {} rules executed, {} breaking changes found",
+                            breaking_result.executed_rules.len(),
+                            breaking_result.changes.len()
+                        );
                         if breaking_result.has_breaking_changes {
-                            println!("Note: Some breaking changes were detected but are considered acceptable for backward compatibility");
+                            println!(
+                                "Note: Some breaking changes were detected but are considered acceptable for backward compatibility"
+                            );
                         }
                     }
                     std::process::exit(0);
@@ -95,8 +107,11 @@ fn main() -> Result<()> {
                     println!("Red: Breaking change detected");
                     if detailed {
                         let breaking_result = old_spec.check_breaking_changes(&new_spec);
-                        println!("Detailed analysis: {} rules executed, {} breaking changes found", 
-                                breaking_result.executed_rules.len(), breaking_result.changes.len());
+                        println!(
+                            "Detailed analysis: {} rules executed, {} breaking changes found",
+                            breaking_result.executed_rules.len(),
+                            breaking_result.changes.len()
+                        );
                         for change in &breaking_result.changes {
                             println!("  - {}: {}", change.rule_id, change.message);
                         }
@@ -110,18 +125,18 @@ fn main() -> Result<()> {
                 .map_err(|e| anyhow::anyhow!("Failed to read file '{}': {}", file.display(), e))?;
 
             let fingerprint = proto_sign::generate_fingerprint(&content)?;
-            println!("{}", fingerprint);
+            println!("{fingerprint}");
         }
-        Commands::Breaking { 
-            old_file, 
-            new_file, 
-            format, 
-            use_rules, 
-            use_categories, 
-            except_rules 
+        Commands::Breaking {
+            old_file,
+            new_file,
+            format,
+            use_rules,
+            use_categories,
+            except_rules,
         } => {
             use proto_sign::compat::BreakingConfig;
-            
+
             let old_content = fs::read_to_string(&old_file).map_err(|e| {
                 anyhow::anyhow!("Failed to read old file '{}': {}", old_file.display(), e)
             })?;
@@ -134,16 +149,19 @@ fn main() -> Result<()> {
 
             // Build configuration
             let mut config = BreakingConfig::default();
-            
+
             if let Some(rules) = use_rules {
                 config.use_rules = rules.split(',').map(|s| s.trim().to_string()).collect();
                 config.use_categories.clear(); // Clear default categories when specific rules are used
             }
-            
+
             if let Some(categories) = use_categories {
-                config.use_categories = categories.split(',').map(|s| s.trim().to_string()).collect();
+                config.use_categories = categories
+                    .split(',')
+                    .map(|s| s.trim().to_string())
+                    .collect();
             }
-            
+
             if let Some(except) = except_rules {
                 config.except_rules = except.split(',').map(|s| s.trim().to_string()).collect();
             }
@@ -153,25 +171,38 @@ fn main() -> Result<()> {
             match format {
                 OutputFormat::Json => {
                     let json = serde_json::to_string_pretty(&breaking_result)?;
-                    println!("{}", json);
+                    println!("{json}");
                 }
                 OutputFormat::Text => {
                     if breaking_result.has_breaking_changes {
                         println!("Breaking changes detected:");
                         for change in &breaking_result.changes {
                             println!("  [{}] {}", change.rule_id, change.message);
-                            println!("    Location: {} ({})", change.location.element_name, change.location.element_type);
+                            println!(
+                                "    Location: {} ({})",
+                                change.location.element_name, change.location.element_type
+                            );
                             if let Some(prev_loc) = &change.previous_location {
-                                println!("    Previous: {} ({})", prev_loc.element_name, prev_loc.element_type);
+                                println!(
+                                    "    Previous: {} ({})",
+                                    prev_loc.element_name, prev_loc.element_type
+                                );
                             }
                             println!("    Categories: {}", change.categories.join(", "));
                             println!();
                         }
                         println!("Summary:");
-                        println!("  Total breaking changes: {}", breaking_result.changes.len());
+                        println!(
+                            "  Total breaking changes: {}",
+                            breaking_result.changes.len()
+                        );
                         println!("  Rules executed: {}", breaking_result.executed_rules.len());
                         if !breaking_result.failed_rules.is_empty() {
-                            println!("  Rules failed: {} ({})", breaking_result.failed_rules.len(), breaking_result.failed_rules.join(", "));
+                            println!(
+                                "  Rules failed: {} ({})",
+                                breaking_result.failed_rules.len(),
+                                breaking_result.failed_rules.join(", ")
+                            );
                         }
                     } else {
                         println!("No breaking changes detected.");

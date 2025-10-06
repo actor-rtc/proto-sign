@@ -1,10 +1,10 @@
 //! Bulk-generated SERVICE rules for service-level breaking change detection
-//! 
+//!
 //! These rules handle service definitions, RPC methods, and their attributes.
 
-use crate::compat::types::{RuleContext, RuleResult};
-use crate::canonical::{CanonicalFile, CanonicalService, CanonicalMethod};
+use crate::canonical::{CanonicalFile, CanonicalMethod, CanonicalService};
 use crate::compat::handlers::{create_breaking_change, create_location};
+use crate::compat::types::{RuleContext, RuleResult};
 use std::collections::HashMap;
 
 // ========================================
@@ -18,26 +18,26 @@ pub fn check_service_no_delete(
     context: &RuleContext,
 ) -> RuleResult {
     let mut changes = Vec::new();
-    
+
     let prev_services = collect_all_services(previous);
     let curr_services = collect_all_services(current);
-    
-    for (service_name, _prev_service) in &prev_services {
+
+    for service_name in prev_services.keys() {
         if !curr_services.contains_key(service_name) {
             changes.push(create_breaking_change(
                 "SERVICE_NO_DELETE",
-                format!("Service \"{}\" was deleted.", service_name),
+                format!("Service \"{service_name}\" was deleted."),
                 create_location(&context.current_file, "file", &context.current_file),
                 Some(create_location(
                     context.previous_file.as_deref().unwrap_or(""),
                     "service",
-                    service_name
+                    service_name,
                 )),
                 vec!["SERVICE".to_string()],
             ));
         }
     }
-    
+
     RuleResult::with_changes(changes)
 }
 
@@ -48,32 +48,37 @@ pub fn check_rpc_no_delete(
     context: &RuleContext,
 ) -> RuleResult {
     let mut changes = Vec::new();
-    
+
     let prev_services = collect_all_services(previous);
     let curr_services = collect_all_services(current);
-    
+
     for (service_name, prev_service) in &prev_services {
         if let Some(curr_service) = curr_services.get(service_name) {
             // Create maps for efficient lookup by method name
-            let prev_methods: HashMap<String, &CanonicalMethod> = prev_service.methods.iter()
-                .map(|m| (m.name.clone(), m)).collect();
-            let curr_methods: HashMap<String, &CanonicalMethod> = curr_service.methods.iter()
-                .map(|m| (m.name.clone(), m)).collect();
-            
+            let prev_methods: HashMap<String, &CanonicalMethod> = prev_service
+                .methods
+                .iter()
+                .map(|m| (m.name.clone(), m))
+                .collect();
+            let curr_methods: HashMap<String, &CanonicalMethod> = curr_service
+                .methods
+                .iter()
+                .map(|m| (m.name.clone(), m))
+                .collect();
+
             // Find deleted methods
-            for (method_name, _prev_method) in &prev_methods {
+            for method_name in prev_methods.keys() {
                 if !curr_methods.contains_key(method_name) {
                     changes.push(create_breaking_change(
                         "RPC_NO_DELETE",
                         format!(
-                            "RPC \"{}\" was deleted from service \"{}\".",
-                            method_name, service_name
+                            "RPC \"{method_name}\" was deleted from service \"{service_name}\"."
                         ),
                         create_location(&context.current_file, "service", service_name),
                         Some(create_location(
                             context.previous_file.as_deref().unwrap_or(""),
                             "rpc",
-                            method_name
+                            method_name,
                         )),
                         vec!["RPC".to_string()],
                     ));
@@ -81,7 +86,7 @@ pub fn check_rpc_no_delete(
             }
         }
     }
-    
+
     RuleResult::with_changes(changes)
 }
 
@@ -92,17 +97,23 @@ pub fn check_rpc_same_request_type(
     context: &RuleContext,
 ) -> RuleResult {
     let mut changes = Vec::new();
-    
+
     let prev_services = collect_all_services(previous);
     let curr_services = collect_all_services(current);
-    
+
     for (service_name, prev_service) in &prev_services {
         if let Some(curr_service) = curr_services.get(service_name) {
-            let prev_methods: HashMap<String, &CanonicalMethod> = prev_service.methods.iter()
-                .map(|m| (m.name.clone(), m)).collect();
-            let curr_methods: HashMap<String, &CanonicalMethod> = curr_service.methods.iter()
-                .map(|m| (m.name.clone(), m)).collect();
-            
+            let prev_methods: HashMap<String, &CanonicalMethod> = prev_service
+                .methods
+                .iter()
+                .map(|m| (m.name.clone(), m))
+                .collect();
+            let curr_methods: HashMap<String, &CanonicalMethod> = curr_service
+                .methods
+                .iter()
+                .map(|m| (m.name.clone(), m))
+                .collect();
+
             for (method_name, prev_method) in &prev_methods {
                 if let Some(curr_method) = curr_methods.get(method_name) {
                     if prev_method.input_type != curr_method.input_type {
@@ -125,7 +136,7 @@ pub fn check_rpc_same_request_type(
             }
         }
     }
-    
+
     RuleResult::with_changes(changes)
 }
 
@@ -136,17 +147,23 @@ pub fn check_rpc_same_response_type(
     context: &RuleContext,
 ) -> RuleResult {
     let mut changes = Vec::new();
-    
+
     let prev_services = collect_all_services(previous);
     let curr_services = collect_all_services(current);
-    
+
     for (service_name, prev_service) in &prev_services {
         if let Some(curr_service) = curr_services.get(service_name) {
-            let prev_methods: HashMap<String, &CanonicalMethod> = prev_service.methods.iter()
-                .map(|m| (m.name.clone(), m)).collect();
-            let curr_methods: HashMap<String, &CanonicalMethod> = curr_service.methods.iter()
-                .map(|m| (m.name.clone(), m)).collect();
-            
+            let prev_methods: HashMap<String, &CanonicalMethod> = prev_service
+                .methods
+                .iter()
+                .map(|m| (m.name.clone(), m))
+                .collect();
+            let curr_methods: HashMap<String, &CanonicalMethod> = curr_service
+                .methods
+                .iter()
+                .map(|m| (m.name.clone(), m))
+                .collect();
+
             for (method_name, prev_method) in &prev_methods {
                 if let Some(curr_method) = curr_methods.get(method_name) {
                     if prev_method.output_type != curr_method.output_type {
@@ -169,7 +186,7 @@ pub fn check_rpc_same_response_type(
             }
         }
     }
-    
+
     RuleResult::with_changes(changes)
 }
 
@@ -180,17 +197,23 @@ pub fn check_rpc_same_client_streaming(
     context: &RuleContext,
 ) -> RuleResult {
     let mut changes = Vec::new();
-    
+
     let prev_services = collect_all_services(previous);
     let curr_services = collect_all_services(current);
-    
+
     for (service_name, prev_service) in &prev_services {
         if let Some(curr_service) = curr_services.get(service_name) {
-            let prev_methods: HashMap<String, &CanonicalMethod> = prev_service.methods.iter()
-                .map(|m| (m.name.clone(), m)).collect();
-            let curr_methods: HashMap<String, &CanonicalMethod> = curr_service.methods.iter()
-                .map(|m| (m.name.clone(), m)).collect();
-            
+            let prev_methods: HashMap<String, &CanonicalMethod> = prev_service
+                .methods
+                .iter()
+                .map(|m| (m.name.clone(), m))
+                .collect();
+            let curr_methods: HashMap<String, &CanonicalMethod> = curr_service
+                .methods
+                .iter()
+                .map(|m| (m.name.clone(), m))
+                .collect();
+
             for (method_name, prev_method) in &prev_methods {
                 if let Some(curr_method) = curr_methods.get(method_name) {
                     if prev_method.client_streaming != curr_method.client_streaming {
@@ -213,7 +236,7 @@ pub fn check_rpc_same_client_streaming(
             }
         }
     }
-    
+
     RuleResult::with_changes(changes)
 }
 
@@ -224,17 +247,23 @@ pub fn check_rpc_same_server_streaming(
     context: &RuleContext,
 ) -> RuleResult {
     let mut changes = Vec::new();
-    
+
     let prev_services = collect_all_services(previous);
     let curr_services = collect_all_services(current);
-    
+
     for (service_name, prev_service) in &prev_services {
         if let Some(curr_service) = curr_services.get(service_name) {
-            let prev_methods: HashMap<String, &CanonicalMethod> = prev_service.methods.iter()
-                .map(|m| (m.name.clone(), m)).collect();
-            let curr_methods: HashMap<String, &CanonicalMethod> = curr_service.methods.iter()
-                .map(|m| (m.name.clone(), m)).collect();
-            
+            let prev_methods: HashMap<String, &CanonicalMethod> = prev_service
+                .methods
+                .iter()
+                .map(|m| (m.name.clone(), m))
+                .collect();
+            let curr_methods: HashMap<String, &CanonicalMethod> = curr_service
+                .methods
+                .iter()
+                .map(|m| (m.name.clone(), m))
+                .collect();
+
             for (method_name, prev_method) in &prev_methods {
                 if let Some(curr_method) = curr_methods.get(method_name) {
                     if prev_method.server_streaming != curr_method.server_streaming {
@@ -257,7 +286,7 @@ pub fn check_rpc_same_server_streaming(
             }
         }
     }
-    
+
     RuleResult::with_changes(changes)
 }
 
@@ -277,7 +306,7 @@ fn collect_all_services(file: &CanonicalFile) -> HashMap<String, &CanonicalServi
 // Rule Export Table
 // ========================================
 
-pub const SERVICE_RULES: &[(&str, fn(&CanonicalFile, &CanonicalFile, &RuleContext) -> RuleResult)] = &[
+pub const SERVICE_RULES: &[crate::compat::types::RuleEntry] = &[
     ("SERVICE_NO_DELETE", check_service_no_delete),
     ("RPC_NO_DELETE", check_rpc_no_delete),
     ("RPC_SAME_REQUEST_TYPE", check_rpc_same_request_type),

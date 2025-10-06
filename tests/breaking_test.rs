@@ -26,17 +26,30 @@ message TestMessage {
 
     let result = old_spec.check_breaking_changes(&new_spec);
 
-    assert!(result.has_breaking_changes, "Should detect breaking change when field is deleted");
-    
+    assert!(
+        result.has_breaking_changes,
+        "Should detect breaking change when field is deleted"
+    );
+
     // Should find the FIELD_NO_DELETE rule violation
-    let field_no_delete_changes: Vec<_> = result.changes
+    let field_no_delete_changes: Vec<_> = result
+        .changes
         .iter()
         .filter(|c| c.rule_id == "FIELD_NO_DELETE")
         .collect();
-    
-    assert!(!field_no_delete_changes.is_empty(), "Should detect FIELD_NO_DELETE violation");
-    assert!(field_no_delete_changes[0].message.contains("age"), "Should mention the deleted field name");
-    assert!(field_no_delete_changes[0].message.contains("2"), "Should mention the field number");
+
+    assert!(
+        !field_no_delete_changes.is_empty(),
+        "Should detect FIELD_NO_DELETE violation"
+    );
+    assert!(
+        field_no_delete_changes[0].message.contains("age"),
+        "Should mention the deleted field name"
+    );
+    assert!(
+        field_no_delete_changes[0].message.contains("2"),
+        "Should mention the field number"
+    );
 }
 
 #[test]
@@ -67,15 +80,27 @@ message TestMessage {
 
     let result = old_spec.check_breaking_changes(&new_spec);
 
-    assert!(result.has_breaking_changes, "Should detect breaking change when message is deleted");
-    
-    let message_no_delete_changes: Vec<_> = result.changes
+    assert!(
+        result.has_breaking_changes,
+        "Should detect breaking change when message is deleted"
+    );
+
+    let message_no_delete_changes: Vec<_> = result
+        .changes
         .iter()
         .filter(|c| c.rule_id == "MESSAGE_NO_DELETE")
         .collect();
-    
-    assert!(!message_no_delete_changes.is_empty(), "Should detect MESSAGE_NO_DELETE violation");
-    assert!(message_no_delete_changes[0].message.contains("AnotherMessage"), "Should mention the deleted message name");
+
+    assert!(
+        !message_no_delete_changes.is_empty(),
+        "Should detect MESSAGE_NO_DELETE violation"
+    );
+    assert!(
+        message_no_delete_changes[0]
+            .message
+            .contains("AnotherMessage"),
+        "Should mention the deleted message name"
+    );
 }
 
 #[test]
@@ -102,7 +127,10 @@ message TestMessage {
 
     let result = old_spec.check_breaking_changes(&new_spec);
 
-    assert!(!result.has_breaking_changes, "Adding a field should not be a breaking change");
+    assert!(
+        !result.has_breaking_changes,
+        "Adding a field should not be a breaking change"
+    );
 }
 
 #[test]
@@ -130,16 +158,29 @@ message TestMessage {
 
     let result = old_spec.check_breaking_changes(&new_spec);
 
-    assert!(result.has_breaking_changes, "Should detect breaking change when field type changes");
-    
-    let field_type_changes: Vec<_> = result.changes
+    assert!(
+        result.has_breaking_changes,
+        "Should detect breaking change when field type changes"
+    );
+
+    let field_type_changes: Vec<_> = result
+        .changes
         .iter()
         .filter(|c| c.rule_id == "FIELD_SAME_TYPE")
         .collect();
-    
-    assert!(!field_type_changes.is_empty(), "Should detect FIELD_SAME_TYPE violation");
-    assert!(field_type_changes[0].message.contains("int32"), "Should mention old type");
-    assert!(field_type_changes[0].message.contains("string"), "Should mention new type");
+
+    assert!(
+        !field_type_changes.is_empty(),
+        "Should detect FIELD_SAME_TYPE violation"
+    );
+    assert!(
+        field_type_changes[0].message.contains("int32"),
+        "Should mention old type"
+    );
+    assert!(
+        field_type_changes[0].message.contains("string"),
+        "Should mention new type"
+    );
 }
 
 #[test]
@@ -172,7 +213,10 @@ message TestMessage {
     };
 
     let result = old_spec.check_breaking_changes_with_config(&new_spec, &config);
-    assert!(result.has_breaking_changes, "Should still detect breaking changes with FILE category");
+    assert!(
+        result.has_breaking_changes,
+        "Should still detect breaking changes with FILE category"
+    );
 
     // Test with excluding the FIELD_NO_DELETE rule
     let config = BreakingConfig {
@@ -182,12 +226,16 @@ message TestMessage {
     };
 
     let result = old_spec.check_breaking_changes_with_config(&new_spec, &config);
-    
+
     // Should not find FIELD_NO_DELETE violations since we excluded it
-    let field_no_delete_changes: Vec<_> = result.changes
+    let field_no_delete_changes: Vec<_> = result
+        .changes
         .iter()
         .filter(|c| c.rule_id == "FIELD_NO_DELETE")
         .collect();
-    
-    assert!(field_no_delete_changes.is_empty(), "Should not detect FIELD_NO_DELETE when excluded");
+
+    assert!(
+        field_no_delete_changes.is_empty(),
+        "Should not detect FIELD_NO_DELETE when excluded"
+    );
 }

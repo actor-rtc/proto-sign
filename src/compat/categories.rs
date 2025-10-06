@@ -21,7 +21,7 @@ impl BreakingCategory {
     pub fn id(&self) -> &'static str {
         match self {
             BreakingCategory::File => "FILE",
-            BreakingCategory::Package => "PACKAGE", 
+            BreakingCategory::Package => "PACKAGE",
             BreakingCategory::Wire => "WIRE",
             BreakingCategory::WireJson => "WIRE_JSON",
         }
@@ -30,10 +30,18 @@ impl BreakingCategory {
     /// Get the description for this category
     pub fn description(&self) -> &'static str {
         match self {
-            BreakingCategory::File => "Checks that there are no source-code breaking changes at the per-file level.",
-            BreakingCategory::Package => "Checks that there are no source-code breaking changes at the per-package level.",
-            BreakingCategory::Wire => "Checks that there are no wire breaking changes for the binary encoding.",
-            BreakingCategory::WireJson => "Checks that there are no wire breaking changes for the binary or JSON encodings.",
+            BreakingCategory::File => {
+                "Checks that there are no source-code breaking changes at the per-file level."
+            }
+            BreakingCategory::Package => {
+                "Checks that there are no source-code breaking changes at the per-package level."
+            }
+            BreakingCategory::Wire => {
+                "Checks that there are no wire breaking changes for the binary encoding."
+            }
+            BreakingCategory::WireJson => {
+                "Checks that there are no wire breaking changes for the binary or JSON encodings."
+            }
         }
     }
 
@@ -69,6 +77,6 @@ impl std::str::FromStr for BreakingCategory {
     type Err = String;
 
     fn from_str(s: &str) -> Result<Self, Self::Err> {
-        Self::from_id(s).ok_or_else(|| format!("Unknown breaking category: {}", s))
+        Self::from_id(s).ok_or_else(|| format!("Unknown breaking category: {s}"))
     }
 }
