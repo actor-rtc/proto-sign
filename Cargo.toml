@@ -2,6 +2,11 @@
 name = "proto-sign"
 version = "0.1.0"
 edition = "2024"
+license = "Apache-2.0"
+description = "Semantic protocol buffer analysis tool for detecting breaking changes"
+repository = "https://github.com/actor-rtc/proto-sign"
+keywords = ["protobuf", "compatibility", "breaking-changes", "protocol", "analysis"]
+categories = ["development-tools"]
 
 [[bin]]
 name = "proto-sign"
