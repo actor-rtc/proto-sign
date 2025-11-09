@@ -200,11 +200,7 @@ create_git_tag() {
 
     log_info "创建 Git 标签: $tag"
 
-    # 提交版本变更
-    git add Cargo.toml Cargo.lock
-    git commit -m "Release version $version"
-
-    # 创建标签
+    # 创建标签（版本变更已经在之前提交了）
     git tag -a "$tag" -m "Release $version"
 
     # 推送到远程
