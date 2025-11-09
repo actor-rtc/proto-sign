@@ -256,6 +256,13 @@ main() {
 
     run_tests
     verify_publish
+
+    # 提交版本变更（在发布前）
+    if [[ "$DRY_RUN" == false ]]; then
+        git add Cargo.toml Cargo.lock
+        git commit -m "Release version $NEW_VERSION"
+    fi
+
     publish_crate
     create_git_tag "$NEW_VERSION"
 
